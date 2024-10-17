@@ -9,8 +9,9 @@
     "drizzle:push": "npx drizzle-kit push",
     "drizzle:delete": "rm -rf ./drizzle",
     "drizzle:seed": "tsx ./src/db/seeders/index.ts",
-    "predev": "npm run docker:delete && npm run drizzle:delete && npm run docker:start && npm run drizzle:generate && npm run drizzle:push && npm run drizzle:seed",
-    "dev": "next dev",
+    "drizzle:migrate": "npx drizzle-kit migrate",
+    "predev": "npm run docker:delete && npm run drizzle:delete && npm run docker:start && npm run drizzle:generate && npm run drizzle:push && npm run drizzle:migrate",
+    "dev": "next dev --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
