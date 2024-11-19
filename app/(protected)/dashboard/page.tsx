@@ -1,12 +1,8 @@
-import BitcoinInfo from "@/components/bitcoin-info";
 
 
-const BitcoinDashboard = () => {
+export default function Dashboard() {
+
     return (
-        <div>
-            <BitcoinInfo/>
-        </div>
+        <h1>Henlo</h1>
     )
 }
-
-export default BitcoinDashboard;
