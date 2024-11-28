@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from app.database.seed import seed_database
 from app.models.models import Base
 from app.database.database import engine
-from app.routers import auth, users
+from app.routers import auth, users, rpc_node
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Define the lifespan context manager
@@ -23,6 +23,6 @@ async def lifespan(app: FastAPI):
 # Create the FastAPI instance with the lifespan context
 app = FastAPI(lifespan=lifespan)
 
-# Include your routers
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(rpc_node.router)
