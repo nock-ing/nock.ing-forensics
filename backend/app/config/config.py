@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     RPC_USER: str = Field(default=os.getenv("BITCOIN_RPC_USER", "user"))
     RPC_PASSWORD: str = Field(default=os.getenv("BITCOIN_RPC_PASSWORD", "pass"))
 
+    WALLET_NAME: str = Field(default=os.getenv("BITCOIN_WALLET_NAME", "default_wallet"))
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
