@@ -6,6 +6,9 @@ from app.auth.dependencies import get_current_active_user
 from app.schema.walletschema import WalletForensicsRequest
 from app.utils.bitcoin_rpc import bitcoin_rpc_call
 
+from collections import defaultdict
+
+
 router = APIRouter()
 
 @router.get("/node-info", response_model=dict)
@@ -213,6 +216,85 @@ async def wallet_forensics(
             "total_sent": total_sent,
             "wallet_balance": wallet_balance,
             "linked_transactions": linked_transactions[:max_depth],
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/coin-age/txid", response_model=dict)
+async def get_coin_age_by_txid(
+    txid: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get the age of coins from a transaction ID.
+    """
+    try:
+        # Fetch raw transaction details
+        raw_tx = bitcoin_rpc_call("getrawtransaction", [txid, True])
+
+        if not raw_tx or "blockhash" not in raw_tx:
+            raise HTTPException(status_code=404, detail=f"Transaction {txid} not found.")
+
+        # Get the block details where the transaction was confirmed
+        block_hash = raw_tx["blockhash"]
+        block = bitcoin_rpc_call("getblock", [block_hash])
+
+        # Calculate coin age in blocks
+        current_block = bitcoin_rpc_call("getblockcount")
+        coin_creation_block = block["height"]
+        age_in_blocks = current_block - coin_creation_block
+        age_in_days = (age_in_blocks * 10) / (60 * 24)  # Approx 10 minutes per block
+
+        return {
+            "txid": txid,
+            "coin_creation_block": coin_creation_block,
+            "current_block": current_block,
+            "age_in_blocks": age_in_blocks,
+            "age_in_days": round(age_in_days, 2),
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/coin-age/address", response_model=dict)
+async def get_coin_age_by_address(
+    address: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get the age of coins for a wallet address.
+    """
+    try:
+        # Fetch unspent outputs for the address
+        unspent_outputs = bitcoin_rpc_call("listunspent", [0, 9999999, [address]])
+
+        if not unspent_outputs:
+            raise HTTPException(status_code=404, detail=f"No UTXOs found for address {address}.")
+
+        current_block = bitcoin_rpc_call("getblockcount")
+        coin_ages = []
+
+        for utxo in unspent_outputs:
+            confirmations = utxo["confirmations"]
+            creation_block = current_block - confirmations
+            age_in_days = (confirmations * 10) / (60 * 24)  # Approx 10 minutes per block
+
+            coin_ages.append({
+                "txid": utxo["txid"],
+                "vout": utxo["vout"],
+                "amount": utxo["amount"],
+                "confirmations": confirmations,
+                "creation_block": creation_block,
+                "age_in_days": round(age_in_days, 2),
+            })
+
+        return {
+            "address": address,
+            "utxos": coin_ages,
+            "current_block": current_block,
         }
 
     except Exception as e:
