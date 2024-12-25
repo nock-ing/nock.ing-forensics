@@ -4,7 +4,6 @@ volumes:
 services:
   backend:
     build:
-      context: ./backend/
       dockerfile: Dockerfile
     environment:
       - PYTHONUNBUFFERED=1
@@ -28,7 +27,7 @@ services:
     ports:
       - 8080:8080
     volumes:
-      - ./backend/app:/code/app
+      - ./:/code
 
   psql:
     image: postgres:latest
