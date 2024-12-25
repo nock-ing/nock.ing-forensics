@@ -4,7 +4,8 @@ volumes:
 services:
   backend:
     build:
-      dockerfile: ./backend/Dockerfile
+      context: ./backend/
+      dockerfile: Dockerfile
     environment:
       - PYTHONUNBUFFERED=1
       - PG_USER=${PG_USER}
@@ -27,7 +28,7 @@ services:
     ports:
       - 8080:8080
     volumes:
-      - ./:/code
+      - ./app:/code/app
 
   psql:
     image: postgres:latest
