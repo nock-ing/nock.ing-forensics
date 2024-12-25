@@ -1,16 +1,16 @@
-from pydantic import BaseModel
+from sqlmodel import SQLModel
 
-class UserBase(BaseModel):
+class UserBase(SQLModel):
     username: str
     email: str | None = None
-    is_active: bool | None = None
 
-class UserCreate(UserBase):
+
+class UserCreate(UserBase, SQLModel):
     password: str
 
-class UserInDB(UserBase):
+class UserInDB(UserBase, SQLModel):
     hashed_password: str
 
-class Token(BaseModel):
+class Token(SQLModel):
     access_token: str
     token_type: str

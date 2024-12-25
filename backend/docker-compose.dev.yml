@@ -2,10 +2,9 @@ version: '3'
 volumes:
   psql:
 services:
-  backend:
+  backend-rpc-dev:
     build:
-      context: ./backend/
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     environment:
       - PYTHONUNBUFFERED=1
       - PG_USER=${PG_USER}
@@ -24,19 +23,27 @@ services:
       - BITCOIN_RPC_PASSWORD=${BITCOIN_RPC_PASSWORD}
       - BITCOIN_RPC_WALLET=${BITCOIN_RPC_WALLET}
     depends_on:
-      - psql
+      - psql-dev
     ports:
       - 8080:8080
     volumes:
-      - ./backend/app:/code/app
+      - ./app:/code/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
-  psql:
+  psql-dev:
     image: postgres:latest
     environment:
       POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}
       POSTGRES_DB: ${PG_DB}
     volumes:
-      - psql:/var/lib/postgresql/data
+      - psql:/var/lib/postgresql/bitcoinrpc
     ports:
       - 5432:5432
+
+
+networks:
+  default:
+    external:
+      name: bitcoinrpc_default

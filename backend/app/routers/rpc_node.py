@@ -201,7 +201,7 @@ async def wallet_forensics(
             total_transactions += 1
 
         # Fetch unspent outputs for the provided address
-        unspent = bitcoin_rpc_call("listunspent", [0, 9999999, [address]])  # Wrap address in a list
+        unspent = bitcoin_rpc_call("listunspent", [0, 9999999, [address]])
         print(f"Unspent outputs: {unspent}")  # Debugging
 
         # Calculate wallet balance
@@ -224,7 +224,7 @@ async def wallet_forensics(
 
 @router.get("/coin-age/txid", response_model=dict)
 async def get_coin_age_by_txid(
-    txid: str,
+    hashid: str,
     current_user: dict = Depends(get_current_active_user)
 ):
     """
@@ -232,10 +232,10 @@ async def get_coin_age_by_txid(
     """
     try:
         # Fetch raw transaction details
-        raw_tx = bitcoin_rpc_call("getrawtransaction", [txid, True])
+        raw_tx = bitcoin_rpc_call("getrawtransaction", [hashid, True])
 
         if not raw_tx or "blockhash" not in raw_tx:
-            raise HTTPException(status_code=404, detail=f"Transaction {txid} not found.")
+            raise HTTPException(status_code=404, detail=f"Transaction {hashid} not found.")
 
         # Get the block details where the transaction was confirmed
         block_hash = raw_tx["blockhash"]
@@ -248,7 +248,7 @@ async def get_coin_age_by_txid(
         age_in_days = (age_in_blocks * 10) / (60 * 24)  # Approx 10 minutes per block
 
         return {
-            "txid": txid,
+            "hashid": hashid,
             "coin_creation_block": coin_creation_block,
             "current_block": current_block,
             "age_in_blocks": age_in_blocks,

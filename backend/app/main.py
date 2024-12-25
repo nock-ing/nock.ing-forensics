@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
 from app.database.seed import seed_database
-from app.models.models import Base
-from app.database.database import engine
+from app.models.models import SQLModel
+from app.database.database import engine, get_db
 from app.routers import auth, users, rpc_node
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,9 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 async def lifespan(app: FastAPI):
     # Perform startup actions (e.g., initialize the database)
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        async with AsyncSession(engine) as session:
-            await seed_database(conn, session)
+        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.commit()
+
+    async with AsyncSession(engine) as session:
+        await seed_database(session)
     yield
     # Perform shutdown actions (e.g., close the database connection)
     await engine.dispose()

@@ -1,6 +1,5 @@
-from pydantic import BaseModel
+from sqlmodel import SQLModel
 
-
-class WalletForensicsRequest(BaseModel):
+class WalletForensicsRequest(SQLModel):
     wallet_address: str
     max_depth: int = 5
