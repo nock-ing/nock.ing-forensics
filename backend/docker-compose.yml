@@ -1,0 +1,42 @@
+version: '3'
+volumes:
+  psql:
+services:
+  backend:
+    build:
+      context: ./backend/
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_DB=${PG_DB}
+      - PG_HOST=${PG_HOST}
+      - PG_PORT=${PG_PORT}
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - DEFAULT_PASSWORD=${DEFAULT_PASSWORD}
+      - BITCOIN_RPC_HOST=${BITCOIN_RPC_HOST}
+      - BITCOIN_RPC_PORT=${BITCOIN_RPC_PORT}
+      - BITCOIN_RPC_USER=${BITCOIN_RPC_USER}
+      - BITCOIN_RPC_PASSWORD=${BITCOIN_RPC_PASSWORD}
+      - BITCOIN_RPC_WALLET=${BITCOIN_RPC_WALLET}
+    depends_on:
+      - psql
+    ports:
+      - 8080:8080
+    volumes:
+      - ./backend/app:/code/app
+
+  psql:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
+    volumes:
+      - psql:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
