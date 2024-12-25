@@ -4,7 +4,7 @@ volumes:
 services:
   backend:
     build:
-      dockerfile: Dockerfile
+      dockerfile: ./backend/Dockerfile
     environment:
       - PYTHONUNBUFFERED=1
       - PG_USER=${PG_USER}
