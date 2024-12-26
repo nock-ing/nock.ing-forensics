@@ -1,10 +1,8 @@
 version: '3'
-volumes:
-  psql:
 services:
   backend:
     build:
-      context: ./backend/
+      context: ./backend
       dockerfile: Dockerfile
     environment:
       - PYTHONUNBUFFERED=1
@@ -27,8 +25,9 @@ services:
       - psql
     ports:
       - 8080:8080
-    volumes:
-      - ./app:/code/app
+    # volumes:
+    #   - ./app:/code/app
+
 
   psql:
     image: postgres:latest
@@ -40,3 +39,6 @@ services:
       - psql:/var/lib/postgresql/data
     ports:
       - 5432:5432
+
+volumes:
+  psql:
