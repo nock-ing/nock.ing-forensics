@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -46,7 +46,7 @@ export default function HealthPage() {
         throw new Error('Failed to fetch node information');
       }
 
-      const data: NodeInfo = await response.json();
+      const data: HealthInfo = await response.json();
       setNodeInfo(data.blockchain_info);
       setError('');
     } catch (err) {

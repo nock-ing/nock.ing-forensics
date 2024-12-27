@@ -31,7 +31,8 @@ export async function GET() {
         }
 
         return NextResponse.json(data);
-    } catch (error) {
+    } catch (error: unknown) {
+        console.error('Node info fetch error:', error);
         return NextResponse.json(
             { detail: 'Internal server error' },
             { status: 500 }
