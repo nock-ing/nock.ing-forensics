@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '../providers/AuthProvider';
 import { useRouter } from 'next/navigation';
+import { setCookie } from 'cookies-next';
 
 export default function LoginForm() {
   const [username, setUsername] = useState('');
@@ -34,9 +35,13 @@ export default function LoginForm() {
       }
 
       const data = await response.json();
-      localStorage.setItem('token', data.access_token);
+      // Set token in cookie with httpOnly flag
+      setCookie('token', data.access_token, {
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        path: '/',
+      });
       setIsAuthenticated(true);
-      router.push('/dashboard'); // Redirect to protected route
+      router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     }

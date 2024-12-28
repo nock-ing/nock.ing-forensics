@@ -1,6 +1,6 @@
 'use client'
 
-import { ProtectedRoute } from "@/app/components/ProtectedRoute"
+import { ProtectedRoute } from "@/components/ProtectedRoute"
 
 export default function ProtectedLayout({
     children,
