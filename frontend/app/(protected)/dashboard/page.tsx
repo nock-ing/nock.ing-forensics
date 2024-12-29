@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 const btcSchema = z.object({
     input: z.string().min(1, { message: 'Input is required' }),
@@ -21,6 +22,7 @@ export default function Dashboard() {
     const [isLoading, setIsLoading] = useState(false);
     const [forensicData, setForensicData] = useState(null);
     const { toast } = useToast();
+    const router = useRouter();
 
     const form = useForm<FormValues>({
         resolver: zodResolver(btcSchema),
@@ -48,16 +50,15 @@ export default function Dashboard() {
                 return;
             }
 
-            // Update the form values
-            const updatedValues = {
-                ...values,
-                isTxid,
-                isWalletAddress
-            };
-
-            console.log('Form submitted:', updatedValues);
+            // Navigate to forensics page with the input and flag
+            router.push(`/forensics?input=${input}&isTxid=${isTxid}`);
         } catch (error) {
             console.error('Error:', error);
+            toast({
+                title: "Error",
+                description: "An error occurred while processing your request",
+                variant: "destructive",
+            });
         } finally {
             setIsLoading(false);
         }

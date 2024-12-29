@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { getCookie } from 'cookies-next';
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -15,7 +16,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
+        const token = getCookie('token');
         setIsAuthenticated(!!token);
         setIsLoading(false);
     }, []);

@@ -45,6 +45,7 @@ export default function LoginForm() {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: formData,
+        credentials: 'include',
       });
 
       if (!response.ok) {

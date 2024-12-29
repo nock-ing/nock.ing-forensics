@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Blocks, Cpu, HardDrive, AlertTriangle, RefreshCw, Link, Clock, Shield } from 'lucide-react'
+import { useAuth } from '@/app/providers/AuthProvider';
+import { getCookie } from 'cookies-next';
 
 interface NodeInfo {
   chain: string;
@@ -24,18 +26,19 @@ interface NodeInfo {
 }
 
 interface HealthInfo {
-    blockchain_info: NodeInfo;
+  blockchain_info: NodeInfo;
 }
 
 export default function HealthPage() {
   const [nodeInfo, setNodeInfo] = useState<NodeInfo | null>(null);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
 
   const fetchNodeInfo = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = getCookie('token');
       const response = await fetch('/api/node-info', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -57,8 +60,10 @@ export default function HealthPage() {
   };
 
   useEffect(() => {
-    fetchNodeInfo();
-  }, []);
+    if (isAuthenticated) {
+      fetchNodeInfo();
+    }
+  }, [isAuthenticated]);
 
   const formatBytes = (bytes: number) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
@@ -116,7 +121,7 @@ export default function HealthPage() {
           <RefreshCw className="mr-2 h-4 w-4" /> Refresh
         </Button>
       </div>
-      
+
       {nodeInfo && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <Card>

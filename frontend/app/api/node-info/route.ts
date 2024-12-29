@@ -6,18 +6,20 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 export async function GET() {
     try {
         const headersList = await headers();
-        const token = headersList.get('authorization');
+        const authHeader = headersList.get('authorization');
 
-        if (!token) {
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return NextResponse.json(
-                { detail: 'No authorization token provided' },
+                { detail: 'Invalid or missing authorization token' },
                 { status: 401 }
             );
         }
 
+        const token = authHeader.split('Bearer ')[1];
+
         const response = await fetch(`${BACKEND_URL}/node-info`, {
             headers: {
-                'Authorization': token,
+                'Authorization': `Bearer ${token}`,
             },
         });
 
