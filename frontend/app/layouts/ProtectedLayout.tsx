@@ -1,6 +1,8 @@
 'use client'
 
 import { ProtectedRoute } from "@/components/ProtectedRoute"
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import {AppSidebar} from "@/components/SideBar";
 
 export default function ProtectedLayout({
     children,
@@ -11,7 +13,13 @@ export default function ProtectedLayout({
         <ProtectedRoute>
             <div className="protected-layout">
                 {/* Add your protected layout components here (e.g., sidebar, nav) */}
-                <main>{children}</main>
+                <SidebarProvider>
+                    <AppSidebar/>
+                    <main>
+                        <SidebarTrigger/>
+                        {children}
+                    </main>
+                </SidebarProvider>
             </div>
         </ProtectedRoute>
     )

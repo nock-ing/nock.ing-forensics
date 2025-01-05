@@ -18,7 +18,7 @@ export async function POST(request: Request) {
             username: formData.get('username')?.toString() || '',
             password: formData.get('password')?.toString() || '',
         };
-        
+
         const response = await fetch(`${BACKEND_URL}/login`, {
             method: 'POST',
             headers: {
