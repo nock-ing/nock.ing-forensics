@@ -1,26 +1,21 @@
-import {Calendar, Home, Inbox, Search, Settings} from "lucide-react";
+import {Calendar, Home, Inbox, Cross, Settings} from "lucide-react";
 import {SidebarItems} from "@/components/SideBar/sidebar.types";
 
 export const items: SidebarItems = [
     {
         title: "Home",
-        url: "#",
+        url: "/dashboard",
         icon: Home,
     },
     {
-        title: "Inbox",
-        url: "#",
+        title: "Forensics",
+        url: "/forensics",
         icon: Inbox,
     },
     {
-        title: "Calendar",
-        url: "#",
-        icon: Calendar,
-    },
-    {
-        title: "Search",
-        url: "#",
-        icon: Search,
+        title: "Health",
+        url: "/health",
+        icon: Cross,
     },
     {
         title: "Settings",

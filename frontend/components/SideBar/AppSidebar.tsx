@@ -7,7 +7,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { items } from "@/components/SideBar/utils";
+import { items } from "@/components/SideBar/menuitems";
 import Image from "next/image";
 import {DarkModeToggle} from "@/components/DarkModeToggle";
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
