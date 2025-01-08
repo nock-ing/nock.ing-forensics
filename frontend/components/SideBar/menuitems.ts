@@ -1,4 +1,4 @@
-import {Calendar, Home, Inbox, Cross, Settings} from "lucide-react";
+import {Home, Inbox, Cross, Settings} from "lucide-react";
 import {SidebarItems} from "@/components/SideBar/sidebar.types";
 
 export const items: SidebarItems = [

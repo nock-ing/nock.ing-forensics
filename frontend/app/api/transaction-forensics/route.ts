@@ -1,12 +1,15 @@
-import { log } from 'console';
 import { NextRequest, NextResponse } from 'next/server';
+import {cookies} from "next/headers";
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 
 export async function GET(req: NextRequest) {
     try {
         const searchParams = req.nextUrl.searchParams;
         const txid = searchParams.get('txid');
         const depth = searchParams.get('depth');
-        const token = req.headers.get('authorization');
+        const cookieStore = await cookies();
+        const token = cookieStore.get('token')?.value;
 
         if (!token) {
             return NextResponse.json(
@@ -15,13 +18,12 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const url = `${process.env.BACKEND_URL}/transaction-forensics?txid=${txid}&depth=${depth}`;
-        console.log('url', url);
-        
+        const url = `${BACKEND_URL}/transaction-forensics?txid=${txid}&depth=${depth}`;
+        console.log(url)
         const response = await fetch(url, {
             headers: {
                 'Accept': 'application/json',
-                'Authorization': token,
+                'Authorization': `Bearer ${token}`,
             },
         });
 
