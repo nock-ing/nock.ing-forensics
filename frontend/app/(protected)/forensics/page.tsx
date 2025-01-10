@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { RelatedTransactionsProps } from "@/components/RelatedTransactions/relatedTransactions.types";
 import RelatedTransactions from "@/components/RelatedTransactions/RelatedTransactions";
 import BitcoinPrevTxChart from "@/components/BitcoinPrevTxChart/BitcoinPrevTxChart";
+import {getCookie} from "cookies-next";
 
 interface CoinAgeData {
     hashid: string;
@@ -35,9 +36,10 @@ export default function ForensicsPage() {
             setLoading(true);
             setError(null);
             try {
+                const token = getCookie('token');
                 const response = await fetch(`/api/coin-age?hashid=${input}`, {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Authorization': `Bearer ${token}`,
                     },
                 });
 

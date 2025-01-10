@@ -1,25 +1,22 @@
 import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
+import {NextResponse} from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 
-export async function GET(req: NextRequest) {
-    try {
-        const searchParams = req.nextUrl.searchParams;
-        const txid = searchParams.get('hashid');
+export async function GET() {
 
+    try {
         const cookieStore = await cookies();
-        const token = cookieStore.get('token')?.value;
+        const token = cookieStore.get("token")?.value;
 
         if (!token) {
             return NextResponse.json(
-                { detail: 'Invalid or missing authorization token' },
+                { detail: "No authorization token provided" },
                 { status: 401 }
-            );
+            )
         }
 
-        const url = `${BACKEND_URL}/coin-age/txid?hashid=${txid}`;
-        console.log('url', url);
+        const url = `${BACKEND_URL}/users/me`;
 
         const response = await fetch(url, {
             headers: {
@@ -35,10 +32,11 @@ export async function GET(req: NextRequest) {
         const data = await response.json();
         return NextResponse.json(data);
 
+
     } catch (error) {
-        console.error('Coin age fetch error:', error);
+        console.error('Failed to fetch user information', error);
         return NextResponse.json(
-            { error: 'Failed to fetch coin age' },
+            { error: 'Failed to fetch user information' },
             { status: 500 }
         );
     }

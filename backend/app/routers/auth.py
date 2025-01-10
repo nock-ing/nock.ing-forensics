@@ -52,3 +52,17 @@ async def register(
         )
     await create_user(db, user)
     return {"message": "User created successfully"}
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.set_cookie(
+        key="token",
+        value="",
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=0,
+        expires=0,
+        path="/"
+    )
+    return {"message": "Logout successful"}

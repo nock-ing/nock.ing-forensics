@@ -34,6 +34,7 @@ export default function Dashboard() {
             const token = localStorage.getItem('token');
             const response = await fetch('/api/latest-blocks', {
                 headers: {
+
                     'Authorization': `Bearer ${token}`
                 }
             });
@@ -66,6 +67,7 @@ export default function Dashboard() {
     }, []);
 
 
+    console.log('latestBlocks', latestBlocks);
     return (
         <div className="container mx-auto p-4">
             <Card className="w-full">

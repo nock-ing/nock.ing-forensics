@@ -1,33 +1,57 @@
+'use client';
+
+import Image from "next/image";
+import { ChevronUp, User2 } from 'lucide-react';
+
 import {
     Sidebar,
-    SidebarContent, SidebarFooter,
+    SidebarContent,
+    SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import { items } from "@/components/SideBar/menuitems";
-import Image from "next/image";
-import {DarkModeToggle} from "@/components/DarkModeToggle";
-import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
-import {ChevronUp, User2} from "lucide-react";
+import { DarkModeToggle } from "@/components/DarkModeToggle";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import {useUser} from "@/hooks/use-user";
+import Link from "next/link";
 
 export function AppSidebar() {
+    const { user, loading, error, signOut } = useUser();
+
+    if (loading) {
+        return <div>Loading...</div>;
+    }
+
+    if (error) {
+        return <div>Error: {error}</div>;
+    }
+
+    if (!user) {
+        return null;
+    }
 
     return (
         <Sidebar
-            variant={"floating"}
-            collapsible={"icon"}
+            variant="floating"
+            collapsible="icon"
         >
             <SidebarContent>
                 <SidebarGroup>
-                    <div className={"flex justify-between align-center"}>
-                        <Image src={"/nock.ing.png"}
-                               alt={"Nock.ing Logo"}
-                               width={120}
-                               height={20}
-                               className={""}
+                    <div className="flex justify-between align-center">
+                        <Image
+                            src="/nock.ing.png"
+                            alt="Nock.ing Logo"
+                            width={120}
+                            height={20}
                         />
                     </div>
                     <SidebarGroupContent>
@@ -48,12 +72,12 @@ export function AppSidebar() {
             </SidebarContent>
             <SidebarFooter>
                 <SidebarMenu>
-                    <div className={"flex justify-between items-center"}>
+                    <div className="flex justify-between items-center">
                         <SidebarMenuItem>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <SidebarMenuButton>
-                                        <User2 /> Username
+                                        <User2 /> {user.username}
                                         <ChevronUp className="ml-auto" />
                                     </SidebarMenuButton>
                                 </DropdownMenuTrigger>
@@ -61,22 +85,22 @@ export function AppSidebar() {
                                     side="top"
                                     className="w-[--radix-popper-anchor-width]"
                                 >
+                                    <Link href={"/account"}>
                                     <DropdownMenuItem>
-                                        <span>Account</span>
+                                            Account
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                        <span>Billing</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem>
-                                        <span>Sign out</span>
+                                    </Link>
+                                    <DropdownMenuItem onClick={signOut}>
+                                        <span>Sign Out</span>
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </SidebarMenuItem>
-                        <DarkModeToggle/>
+                        <DarkModeToggle />
                     </div>
                 </SidebarMenu>
             </SidebarFooter>
         </Sidebar>
-    )
+    );
 }
+

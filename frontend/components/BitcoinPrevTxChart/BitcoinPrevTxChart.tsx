@@ -25,14 +25,6 @@ const TransactionCharts: React.FC<RelatedTransactionsProps> = ({ related_transac
                 <Bar dataKey="totalValue" fill="#8884d8"/>
             </BarChart>
 
-            <h2 className="text-lg font-bold mt-8">Transaction Value Distribution</h2>
-            <BarChart width={600} height={300} data={bitcoinValueData}>
-                <XAxis dataKey="txid"/>
-                <YAxis/>
-                <Tooltip/>
-                <Bar dataKey="totalValue" fill="#82ca9d"/>
-            </BarChart>
-
             <h2 className="text-lg font-bold mt-8">Transaction Size</h2>
             <LineChart width={600} height={300} data={transactionSizeData}>
                 <XAxis dataKey="txid"/>

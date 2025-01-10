@@ -19,8 +19,7 @@ export const items: SidebarItems = [
     },
     {
         title: "Settings",
-        url: "#",
+        url: "/account",
         icon: Settings,
     },
 ]
-

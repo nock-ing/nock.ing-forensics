@@ -7,3 +7,8 @@ export type SidebarItem = {
 }
 
 export type SidebarItems = SidebarItem[];
+
+export type User = {
+    username: string,
+    email: string,
+}
