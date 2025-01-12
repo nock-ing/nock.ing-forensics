@@ -3,6 +3,11 @@ export interface Transaction {
     details: {
         confirmations: number
         time: number
+        version: number
+        vsize: number
+        weight: number
+        locktime: number
+        blockhash: string
         vin: Array<{
             txid: string
             vout: number

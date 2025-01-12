@@ -6,6 +6,7 @@ import {Badge} from "@/components/ui/badge";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {Button} from "@/components/ui/button";
+import Link from "next/link";
 
 export default function TransactionCard({ transaction }: { transaction: Transaction }) {
     const [isDetailsOpen, setIsDetailsOpen] = useState(false)
@@ -55,7 +56,7 @@ export default function TransactionCard({ transaction }: { transaction: Transact
                             <TableBody>
                                 {transaction.details.vin.map((input, index) => (
                                     <TableRow key={index}>
-                                        <TableCell>{formatAddress(input.txid)}</TableCell>
+                                        <Link href={`/forensics?input=${input.txid}&isTxid=true`}><TableCell>{formatAddress(input.txid)}</TableCell></Link>
                                         <TableCell>{input.vout}</TableCell>
                                     </TableRow>
                                 ))}
@@ -74,7 +75,7 @@ export default function TransactionCard({ transaction }: { transaction: Transact
                             <TableBody>
                                 {transaction.details.vout.map((output, index) => (
                                     <TableRow key={index}>
-                                        <TableCell>{formatAddress(output.scriptPubKey.address)}</TableCell>
+                                        <Link href={`/forensics?input=${output.scriptPubKey.address}&isTxid=false`}><TableCell>{formatAddress(output.scriptPubKey.address)}</TableCell></Link>
                                         <TableCell>{formatBTC(output.value)}</TableCell>
                                     </TableRow>
                                 ))}

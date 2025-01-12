@@ -7,7 +7,6 @@ export async function GET(req: NextRequest) {
     try {
         const searchParams = req.nextUrl.searchParams;
         const txid = searchParams.get('txid');
-        const depth = searchParams.get('depth');
         const cookieStore = await cookies();
         const token = cookieStore.get('token')?.value;
 
@@ -18,7 +17,7 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const url = `${BACKEND_URL}/transaction-forensics?txid=${txid}&depth=${depth}`;
+        const url = `${BACKEND_URL}/tx-info?txid=${txid}`;
         console.log(url)
         const response = await fetch(url, {
             headers: {
@@ -41,4 +40,4 @@ export async function GET(req: NextRequest) {
             { status: 500 }
         );
     }
-} 
+}

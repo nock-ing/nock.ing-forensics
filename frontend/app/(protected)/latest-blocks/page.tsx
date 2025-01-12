@@ -10,7 +10,7 @@ import BlockCard from "@/components/BlockCard/BlockCard";
 import { useToast } from "@/hooks/use-toast";
 import {BlockSkeleton} from "@/components/BlockCard/BlockSkeleton";
 
-export default function Dashboard() {
+export default function Page() {
     const [latestBlocks, setLatestBlocks] = useState<BlockList>({ latest_blocks: [] });
     const [optimisticBlocks, setOptimisticBlocks] = useOptimistic<BlockList>(latestBlocks);
     const [isPending, startTransition] = useTransition();
@@ -39,7 +39,6 @@ export default function Dashboard() {
                 }
             });
 
-            console.log('response', response);
             if (!response.ok) {
                 throw new Error('Failed to fetch latest blocks');
             }
@@ -66,8 +65,6 @@ export default function Dashboard() {
         fetchLatestBlocks();
     }, []);
 
-
-    console.log('latestBlocks', latestBlocks);
     return (
         <div className="container mx-auto p-4">
             <Card className="w-full">
@@ -84,7 +81,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="h-[calc(100vh-200px)]">
-                        {optimisticBlocks.latest_blocks.length > 0 ? (
+                        {optimisticBlocks && optimisticBlocks.latest_blocks ? optimisticBlocks?.latest_blocks.length > 0 ? (
                             <div className="space-y-4">
                                 {optimisticBlocks.latest_blocks.map((block: Block) => (
                                     block.hash.startsWith('Loading-') ? (
@@ -100,7 +97,9 @@ export default function Dashboard() {
                                     <BlockSkeleton key={index} />
                                 ))}
                             </div>
-                        )}
+                        ): <p>
+                            No blocks found. Please check your connection to your node.
+                        </p>}
                     </ScrollArea>
                 </CardContent>
             </Card>

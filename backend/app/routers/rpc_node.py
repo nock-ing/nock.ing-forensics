@@ -68,7 +68,7 @@ async def get_current_wallet():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/transaction-forensics", response_model=dict)
+@router.get("/related-tx", response_model=dict)
 async def transaction_forensics(
     txid: str,
     depth: int = 5,
@@ -220,6 +220,30 @@ async def wallet_forensics(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/tx-info", response_model=dict)
+async def get_tx_info(
+    txid: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Fetch details about a specific transaction by its txid.
+    """
+    try:
+        # Fetch transaction details
+        raw_tx = bitcoin_rpc_call("getrawtransaction", [txid, True]) 
+
+        # Check if transaction details are valid
+        if not raw_tx:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Transaction {txid} not found."
+            )
+
+        return {"transaction": raw_tx} 
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) 
 
 
 @router.get("/coin-age/txid", response_model=dict)

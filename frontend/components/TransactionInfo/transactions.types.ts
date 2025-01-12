@@ -1,0 +1,37 @@
+export type Transaction = {
+    transaction: {
+        txid: string;
+        hash: string;
+        version: number;
+        size: number;
+        vsize: number;
+        weight: number;
+        locktime: number;
+        vin: Array<{
+            txid: string;
+            vout: number;
+            scriptSig: {
+                asm: string;
+                hex: string;
+            };
+            txinwitness: string[];
+            sequence: number;
+        }>;
+        vout: Array<{
+            value: number;
+            n: number;
+            scriptPubKey: {
+                asm: string;
+                desc: string;
+                hex: string;
+                address: string;
+                type: string;
+            };
+        }>;
+        hex: string;
+        blockhash: string;
+        confirmations: number;
+        time: number;
+        blocktime: number;
+    };
+};
