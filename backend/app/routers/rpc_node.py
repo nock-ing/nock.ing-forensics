@@ -8,6 +8,7 @@ from app.utils.bitcoin_rpc import bitcoin_rpc_call
 
 from collections import defaultdict
 
+from app.utils.mempool_api import mempool_api_call
 
 router = APIRouter()
 
@@ -319,6 +320,26 @@ async def get_coin_age_by_address(
             "address": address,
             "utxos": coin_ages,
             "current_block": current_block,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/address/txs", response_model=dict)
+async def get_address_txs(
+    address: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Fetch all transactions related to a given address.
+    """
+    try:
+        # Fetch address transactions
+        address_txs = mempool_api_call(f"api/address/{address}/txs")
+
+        return {
+            "address": address,
+            "transactions": address_txs,
         }
 
     except Exception as e:
