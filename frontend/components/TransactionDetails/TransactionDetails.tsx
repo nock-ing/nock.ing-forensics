@@ -83,7 +83,7 @@ export function TransactionDetails({ txData }: { txData: Transaction }) {
                                 {"fee" in txData && (
                                     <TableRow>
                                         <TableCell className="font-medium">Fee</TableCell>
-                                        <TableCell>{formatBTC((txData.fee as number) / 100000000)} BTC</TableCell>
+                                        <TableCell>{formatBTC((txData.fee as number) / 100000000)}</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
@@ -95,7 +95,7 @@ export function TransactionDetails({ txData }: { txData: Transaction }) {
                         <p>Number of outputs: {txData.vout?.length}</p>
                         <p>
                             Total output value:{" "}
-                            {formatBTC(txData.vout?.reduce((sum, output) => sum + ("value" in output ? output.value : 0), 0))} BTC
+                            {formatBTC(txData.vout?.reduce((sum, output) => sum + ("value" in output ? output.value : 0), 0))}
                         </p>
                     </div>
                 </div>
