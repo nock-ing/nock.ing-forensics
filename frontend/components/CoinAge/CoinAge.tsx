@@ -9,7 +9,7 @@ interface CoinAgeProps {
     age_in_days: number;
 }
 
-export default function CoinAge({ hashid, coin_creation_block, current_block, age_in_blocks, age_in_days }: CoinAgeProps) {
+export default function CoinAge({  coin_creation_block, age_in_blocks, age_in_days }: CoinAgeProps) {
     return (
         <Card className="w-full">
             <CardContent className="pt-6">

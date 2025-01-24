@@ -20,7 +20,6 @@ type FormValues = z.infer<typeof btcSchema>;
 
 export default function Dashboard() {
     const [isLoading, setIsLoading] = useState(false);
-    const [forensicData, setForensicData] = useState(null);
     const { toast } = useToast();
     const router = useRouter();
 

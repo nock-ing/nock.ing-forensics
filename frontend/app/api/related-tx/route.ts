@@ -19,7 +19,6 @@ export async function GET(req: NextRequest) {
         }
 
         const url = `${BACKEND_URL}/related-tx?txid=${txid}&depth=${depth}`;
-        console.log(url)
         const response = await fetch(url, {
             headers: {
                 'Accept': 'application/json',

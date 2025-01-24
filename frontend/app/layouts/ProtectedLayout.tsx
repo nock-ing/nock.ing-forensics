@@ -25,7 +25,7 @@ export default function ProtectedLayout({
                     !isDashboard ? (
                         <SidebarProvider>
                             <AppSidebar/>
-                            <main>
+                            <main className={"border-border"}>
                                 <SidebarTrigger/>
                                 {children}
                             </main>

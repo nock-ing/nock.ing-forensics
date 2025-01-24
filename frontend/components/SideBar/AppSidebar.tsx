@@ -43,6 +43,7 @@ export function AppSidebar() {
         <Sidebar
             variant="floating"
             collapsible="icon"
+            className={"border-border"}
         >
             <SidebarContent>
                 <SidebarGroup>
@@ -59,7 +60,7 @@ export function AppSidebar() {
                             {items.map((item) => (
                                 <SidebarMenuItem key={item.title}>
                                     <SidebarMenuButton asChild>
-                                        <a href={item.url}>
+                                        <a href={item.url} className={"dark:hover:bg-accent"}>
                                             <item.icon />
                                             <span>{item.title}</span>
                                         </a>

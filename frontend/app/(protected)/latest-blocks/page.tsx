@@ -63,7 +63,7 @@ export default function Page() {
 
     useEffect(() => {
         fetchLatestBlocks();
-    }, []);
+    }, [fetchLatestBlocks]);
 
     return (
         <div className="container mx-auto p-4">

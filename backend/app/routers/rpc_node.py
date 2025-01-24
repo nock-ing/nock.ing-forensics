@@ -232,7 +232,7 @@ async def get_tx_info(
     """
     try:
         # Fetch transaction details
-        raw_tx = bitcoin_rpc_call("getrawtransaction", [txid, True]) 
+        raw_tx = bitcoin_rpc_call("getrawtransaction", [txid, True])
 
         # Check if transaction details are valid
         if not raw_tx:
@@ -241,10 +241,63 @@ async def get_tx_info(
                 detail=f"Transaction {txid} not found."
             )
 
-        return {"transaction": raw_tx} 
+        return {"transaction": raw_tx}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/mempool/tx/info", response_model=dict)
+async def get_tx_info_mempool(
+    txid: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Fetch all transactions related to a given address.
+    """
+    try:
+        # Fetch address transactions
+        tx_info= mempool_api_call(f"api/tx/{txid}")
+
+        return {
+            "txid": txid,
+            "transaction": tx_info,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/tx/wallet")
+async def get_tx_wallet(
+    txid: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get the wallet address from a given transaction ID.
+    """
+
+    try:
+        # Fetch raw transaction details
+        tx_info= mempool_api_call(f"api/tx/{txid}")
+
+        if not tx_info:
+            raise HTTPException(status_code=404, detail=f"Transaction {txid} not found.")
+
+
+    # scriptpubkey_address is in vin
+        scriptpubkey_address = tx_info["vin"][0]["prevout"]["scriptpubkey_address"]
+
+        if not scriptpubkey_address:
+            raise HTTPException(status_code=404, detail=f"Transaction {txid} not found.")
+
+        return {
+            "txid": txid,
+            "scriptpubkey_address": scriptpubkey_address,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 
 @router.get("/coin-age/txid", response_model=dict)
@@ -344,3 +397,23 @@ async def get_address_txs(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/received-by-address", response_model=dict)
+async def get_received_by_address(
+    address: str,
+    current_user: dict = Depends(get_current_active_user)
+):
+    """
+    Get the total amount received by a specific Bitcoin address.
+    """
+    try:
+        received_amount = bitcoin_rpc_call("getreceivedbyaddress", [address])
+
+        return {
+            "address": address,
+            "total_received": received_amount
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+

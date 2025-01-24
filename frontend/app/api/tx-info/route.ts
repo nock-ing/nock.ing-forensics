@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
         }
 
         const url = `${BACKEND_URL}/tx-info?txid=${txid}`;
-        console.log(url)
         const response = await fetch(url, {
             headers: {
                 'Accept': 'application/json',

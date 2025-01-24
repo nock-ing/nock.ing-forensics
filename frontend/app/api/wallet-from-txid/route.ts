@@ -1,25 +1,23 @@
-import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import {cookies} from "next/headers";
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 
 export async function GET(req: NextRequest) {
     try {
         const searchParams = req.nextUrl.searchParams;
-        const txid = searchParams.get('hashid');
-
+        const txid = searchParams.get('txid');
         const cookieStore = await cookies();
         const token = cookieStore.get('token')?.value;
 
         if (!token) {
             return NextResponse.json(
-                { detail: 'Invalid or missing authorization token' },
+                { error: 'Unauthorized' },
                 { status: 401 }
             );
         }
 
-        const url = `${BACKEND_URL}/coin-age/txid?hashid=${txid}`;
-
+        const url = `${BACKEND_URL}/tx/wallet?txid=${txid}`;
         const response = await fetch(url, {
             headers: {
                 'Accept': 'application/json',
@@ -35,9 +33,9 @@ export async function GET(req: NextRequest) {
         return NextResponse.json(data);
 
     } catch (error) {
-        console.error('Coin age fetch error:', error);
+        console.error('Transaction forensics error:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch coin age' },
+            { error: 'Failed to fetch transaction forensics' },
             { status: 500 }
         );
     }
