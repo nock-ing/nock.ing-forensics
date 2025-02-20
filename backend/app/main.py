@@ -6,6 +6,7 @@ from app.models.models import SQLModel
 from app.database.database import engine, get_db
 from app.routers import auth, users, rpc_node
 from sqlalchemy.ext.asyncio import AsyncSession
+import redis
 
 # Define the lifespan context manager
 @asynccontextmanager
@@ -28,3 +29,7 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(rpc_node.router)
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
