@@ -10,6 +10,8 @@ from collections import defaultdict
 
 from app.utils.mempool_api import mempool_api_call
 
+from app.utils.redis import get_redis
+
 router = APIRouter()
 
 @router.get("/node-info", response_model=dict)
@@ -136,115 +138,39 @@ async def transaction_forensics(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/wallet-forensics", response_model=dict)
-async def wallet_forensics(
-    request: WalletForensicsRequest,  # Assume this now includes only "address" and "max_depth"
-    current_user: dict = Depends(get_current_active_user)
-):
-    """
-    Perform forensic analysis on a single wallet address.
-    Dynamically import the address and analyze its activity.
-    """
-    try:
-        # Extract data from the request
-        address = request.wallet_address
-        max_depth = request.max_depth
-
-        # Fetch address info
-        address_info = bitcoin_rpc_call("getaddressinfo", [address])
-        print(f"Address info: {address_info}")  # Debugging
-
-        if not address_info.get("ismine") and not address_info.get("iswatchonly"):
-            # Construct the addr() descriptor for the address
-            try:
-                descriptor_info = bitcoin_rpc_call("getdescriptorinfo", [f"addr({address})"])
-                descriptor_with_checksum = descriptor_info["descriptor"]
-
-                # Prepare descriptor payload without "active"
-                descriptor_payload = [
-                    {
-                        "desc": descriptor_with_checksum,
-                        "timestamp": "now",
-                        "label": "forensic_analysis"
-                    }
-                ]
-                print(f"Descriptor payload: {json.dumps(descriptor_payload, indent=2)}")  # Debugging
-
-                # Import descriptor
-                import_response = bitcoin_rpc_call("importdescriptors", [descriptor_payload])
-                if not import_response[0].get("success"):
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Failed to import address: {address}. Error: {import_response[0].get('error')}"
-                    )
-            except Exception as e:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to construct or import descriptor for address: {address}. Error: {str(e)}"
-                )
-
-        # Initialize metrics
-        total_received = 0
-        total_sent = 0
-        total_transactions = 0
-        unspent_outputs = []
-        linked_transactions = []
-
-        # Fetch all transactions for the wallet
-        raw_transactions = bitcoin_rpc_call("listtransactions", ["*", max_depth])
-
-        for tx in raw_transactions:
-            linked_transactions.append(tx)
-            if tx["category"] == "receive":
-                total_received += tx["amount"]
-            elif tx["category"] == "send":
-                total_sent += tx["amount"]
-            total_transactions += 1
-
-        # Fetch unspent outputs for the provided address
-        unspent = bitcoin_rpc_call("listunspent", [0, 9999999, [address]])
-        print(f"Unspent outputs: {unspent}")  # Debugging
-
-        # Calculate wallet balance
-        wallet_balance = sum(utxo["amount"] for utxo in unspent)
-        print(f"Wallet balance: {wallet_balance}")  # Debugging
-
-        # Return forensic data
-        return {
-            "wallet_address": address,
-            "total_transactions": total_transactions,
-            "total_received": total_received,
-            "total_sent": total_sent,
-            "wallet_balance": wallet_balance,
-            "linked_transactions": linked_transactions[:max_depth],
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 @router.get("/tx-info", response_model=dict)
 async def get_tx_info(
     txid: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user),
+    r = Depends(get_redis)
 ):
     """
     Fetch details about a specific transaction by its txid.
+    Uses Redis to cache results for quicker response times.
     """
     try:
-        # Fetch transaction details
+        cached_tx = r.get(f"tx:{txid}")
+        if cached_tx:
+            return json.loads(cached_tx)
+
+        # Fetch transaction details from the Bitcoin node
         raw_tx = bitcoin_rpc_call("getrawtransaction", [txid, True])
 
-        # Check if transaction details are valid
         if not raw_tx:
             raise HTTPException(
                 status_code=404,
                 detail=f"Transaction {txid} not found."
             )
 
+        # Store result in Redis for 10 minutes
+        r.lpush("txid", txid) 
+        r.ltrim("txid", 0, 9)
+
         return {"transaction": raw_tx}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @router.get("/mempool/tx/info", response_model=dict)
@@ -270,7 +196,8 @@ async def get_tx_info_mempool(
 @router.get("/tx/wallet")
 async def get_tx_wallet(
     txid: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user),
+    r = Depends(get_redis)
 ):
     """
     Get the wallet address from a given transaction ID.
@@ -289,6 +216,10 @@ async def get_tx_wallet(
 
         if not scriptpubkey_address:
             raise HTTPException(status_code=404, detail=f"Transaction {txid} not found.")
+
+        # set to redis
+        r.lpush("wallet", json.dumps(scriptpubkey_address))
+        r.ltrim("wallet", 0, 9)  # Keep the most recent 10 wallets
 
         return {
             "txid": txid,
@@ -407,7 +338,7 @@ async def get_received_by_address(
     Get the total amount received by a specific Bitcoin address.
     """
     try:
-        received_amount = bitcoin_rpc_call("getreceivedbyaddress", [address])
+        received_amount = mempool_api_call(f"api/address/{address}")
 
         return {
             "address": address,
@@ -417,3 +348,26 @@ async def get_received_by_address(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/recent-txids", response_model=list)
+async def get_recent_txids(r=Depends(get_redis)):
+    """
+    Retrieve the most recent 10 transaction IDs stored in Redis.
+    """
+    try:
+        recent_txids = r.lrange("txid", 0, 9)
+        return [txid.decode() for txid in recent_txids]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/recent-wallets", response_model=list)
+async def get_recent_wallets(r=Depends(get_redis)):
+    """
+    Retrieve the most recent 10 analyzed wallet addresses.
+    """
+    try:
+        recent_wallets = r.lrange("wallet", 0, 9)
+        return [wallet.decode() for wallet in recent_wallets]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
