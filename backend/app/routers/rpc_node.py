@@ -4,13 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.dependencies import get_current_active_user
 from app.schema.walletschema import WalletForensicsRequest
+from app.utils.redis_service import RedisService, get_redis_service
 from app.utils.bitcoin_rpc import bitcoin_rpc_call
 
 from collections import defaultdict
 
 from app.utils.mempool_api import mempool_api_call
-
-from app.utils.redis import get_redis
 
 router = APIRouter()
 
@@ -142,14 +141,14 @@ async def transaction_forensics(
 async def get_tx_info(
     txid: str,
     current_user: dict = Depends(get_current_active_user),
-    r = Depends(get_redis)
+    redis_service: RedisService = Depends(get_redis_service)
 ):
     """
     Fetch details about a specific transaction by its txid.
     Uses Redis to cache results for quicker response times.
     """
     try:
-        cached_tx = r.get(f"tx:{txid}")
+        cached_tx = redis_service.get(txid)
         if cached_tx:
             return json.loads(cached_tx)
 
@@ -161,10 +160,8 @@ async def get_tx_info(
                 status_code=404,
                 detail=f"Transaction {txid} not found."
             )
-
-        # Store result in Redis for 10 minutes
-        r.lpush("txid", txid) 
-        r.ltrim("txid", 0, 9)
+        
+        redis_service.lpush_trim("txid", txid)
 
         return {"transaction": raw_tx}
 
@@ -176,7 +173,8 @@ async def get_tx_info(
 @router.get("/mempool/tx/info", response_model=dict)
 async def get_tx_info_mempool(
     txid: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user),
+    redis_service: RedisService = Depends(get_redis_service)
 ):
     """
     Fetch all transactions related to a given address.
@@ -184,6 +182,8 @@ async def get_tx_info_mempool(
     try:
         # Fetch address transactions
         tx_info= mempool_api_call(f"api/tx/{txid}")
+
+        redis_service.lpush_trim("txid", txid)
 
         return {
             "txid": txid,
@@ -197,29 +197,25 @@ async def get_tx_info_mempool(
 async def get_tx_wallet(
     txid: str,
     current_user: dict = Depends(get_current_active_user),
-    r = Depends(get_redis)
+    redis_service: RedisService = Depends(get_redis_service)
 ):
     """
     Get the wallet address from a given transaction ID.
     """
 
     try:
-        # Fetch raw transaction details
         tx_info= mempool_api_call(f"api/tx/{txid}")
 
         if not tx_info:
             raise HTTPException(status_code=404, detail=f"Transaction {txid} not found.")
 
 
-    # scriptpubkey_address is in vin
         scriptpubkey_address = tx_info["vin"][0]["prevout"]["scriptpubkey_address"]
 
         if not scriptpubkey_address:
             raise HTTPException(status_code=404, detail=f"Transaction {txid} not found.")
 
-        # set to redis
-        r.lpush("wallet", json.dumps(scriptpubkey_address))
-        r.ltrim("wallet", 0, 9)  # Keep the most recent 10 wallets
+        redis_service.lpush_trim("wallet", scriptpubkey_address)
 
         return {
             "txid": txid,
@@ -234,27 +230,27 @@ async def get_tx_wallet(
 @router.get("/coin-age/txid", response_model=dict)
 async def get_coin_age_by_txid(
     hashid: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user),
+    redis_service: RedisService = Depends(get_redis_service)
 ):
     """
     Get the age of coins from a transaction ID.
     """
     try:
-        # Fetch raw transaction details
         raw_tx = bitcoin_rpc_call("getrawtransaction", [hashid, True])
 
         if not raw_tx or "blockhash" not in raw_tx:
             raise HTTPException(status_code=404, detail=f"Transaction {hashid} not found.")
 
-        # Get the block details where the transaction was confirmed
         block_hash = raw_tx["blockhash"]
         block = bitcoin_rpc_call("getblock", [block_hash])
 
-        # Calculate coin age in blocks
         current_block = bitcoin_rpc_call("getblockcount")
         coin_creation_block = block["height"]
         age_in_blocks = current_block - coin_creation_block
-        age_in_days = (age_in_blocks * 10) / (60 * 24)  # Approx 10 minutes per block
+        age_in_days = (age_in_blocks * 10) / (60 * 24)  
+
+        redis_service.lpush_trim("txid", hashid)
 
         return {
             "hashid": hashid,
@@ -350,19 +346,19 @@ async def get_received_by_address(
 
 
 @router.get("/recent-txids", response_model=list)
-async def get_recent_txids(r=Depends(get_redis)):
+async def get_recent_txids(redis_service: RedisService = Depends(get_redis_service)):
     """
     Retrieve the most recent 10 transaction IDs stored in Redis.
     """
     try:
-        recent_txids = r.lrange("txid", 0, 9)
+        recent_txids = redis_service.get_recent_list("txid")
         return [txid.decode() for txid in recent_txids]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/recent-wallets", response_model=list)
-async def get_recent_wallets(r=Depends(get_redis)):
+async def get_recent_wallets():
     """
     Retrieve the most recent 10 analyzed wallet addresses.
     """
