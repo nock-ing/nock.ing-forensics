@@ -308,7 +308,8 @@ async def get_coin_age_by_address(
 @router.get("/address/txs", response_model=dict)
 async def get_address_txs(
     address: str,
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user),
+    redis_service: RedisService = Depends(get_redis_service)
 ):
     """
     Fetch all transactions related to a given address.
@@ -316,6 +317,7 @@ async def get_address_txs(
     try:
         # Fetch address transactions
         address_txs = mempool_api_call(f"api/address/{address}/txs")
+        redis_service.lpush_trim("wallet", address)
 
         return {
             "address": address,
@@ -341,29 +343,5 @@ async def get_received_by_address(
             "total_received": received_amount
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/recent-txids", response_model=list)
-async def get_recent_txids(redis_service: RedisService = Depends(get_redis_service)):
-    """
-    Retrieve the most recent 10 transaction IDs stored in Redis.
-    """
-    try:
-        recent_txids = redis_service.get_recent_list("txid")
-        return [txid.decode() for txid in recent_txids]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/recent-wallets", response_model=list)
-async def get_recent_wallets():
-    """
-    Retrieve the most recent 10 analyzed wallet addresses.
-    """
-    try:
-        recent_wallets = r.lrange("wallet", 0, 9)
-        return [wallet.decode() for wallet in recent_wallets]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
