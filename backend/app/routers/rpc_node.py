@@ -161,7 +161,10 @@ async def get_tx_info(
                 detail=f"Transaction {txid} not found."
             )
         
-        redis_service.lpush_trim("txid", txid)
+
+        # Cache the result for future requests
+        redis_service.set(txid, json.dumps(raw_tx), 600)
+
 
         return {"transaction": raw_tx}
 

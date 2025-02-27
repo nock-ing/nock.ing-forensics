@@ -7,9 +7,8 @@ class RedisService:
 
     def get(self, key):
         value = self.redis.get(key)
-        # if not a list make it into one
         if value:
-            return [value.decode()]
+            return value.decode()
         return []
 
     def set(self, key, value, expiry=600):
