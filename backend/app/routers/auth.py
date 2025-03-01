@@ -7,6 +7,7 @@ from app.database.crud import get_user_by_username, create_user
 from app.schema.schema import Token, UserCreate
 from app.auth.security import create_access_token, verify_password
 from app.config.config import settings
+from app.utils.redis_service import RedisService, get_redis_service
 
 router = APIRouter()
 
@@ -15,7 +16,8 @@ router = APIRouter()
 async def login_for_access_token(
         response: Response,
         form_data: OAuth2PasswordRequestForm = Depends(),
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
+        redis_service: RedisService = Depends(get_redis_service)
 ):
     user = await get_user_by_username(db, form_data.username)
     if not user or not verify_password(form_data.password, user.hashed_password):
