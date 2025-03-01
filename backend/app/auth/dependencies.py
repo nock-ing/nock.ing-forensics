@@ -11,6 +11,11 @@ async def get_current_user(
         token: str = Depends(verify_access_token),
         db: AsyncSession = Depends(get_db)
 ) -> UserBase:
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+        )
     username = token.get("sub")
     if username is None:
         raise HTTPException(

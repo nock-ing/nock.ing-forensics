@@ -9,11 +9,17 @@ class RedisService:
         value = self.redis.get(key)
         if value:
             return value.decode()
-        return []
+        return None
 
-    def set(self, key, value, expiry=600):
-        self.redis.setex(key, expiry, value)
-
+    def set(self, key, value, expiry=None):
+        if expiry != None:
+            self.redis.setex(key, expiry, value)
+        else:
+            self.redis.set(key, value)
+    
+    def delete(self, key):
+        self.redis.delete(key)
+    
     def lpush_trim(self, key, value, limit=10):
         self.redis.lpush(key, value)
         self.redis.ltrim(key, 0, limit - 1)
