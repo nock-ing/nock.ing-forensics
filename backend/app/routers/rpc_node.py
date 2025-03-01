@@ -171,6 +171,7 @@ async def get_tx_info(
     current_user: dict = Depends(get_current_active_user),
     redis_service: RedisService = Depends(get_redis_service),
 ):
+    
     """
     Fetch details about a specific transaction by its txid.
     Uses Redis to cache results for quicker response times.
