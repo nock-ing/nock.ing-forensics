@@ -6,6 +6,7 @@ from app.models.transactions import Transactions
 from app.models.blocks import Blocks
 from app.models.wallets import Wallets
 from app.models.users import Users
+from app.models.investigations import Investigations
 from dotenv import load_dotenv
 
 from sqlmodel import select
@@ -83,3 +84,19 @@ async def seed_tx(session: AsyncSession):
         session.add(default_tx)
         await session.commit()
         print("Tx Seed Successful")
+
+async def seed_investigations(session: AsyncSession):
+    result = await session.execute(select(Investigations).limit(1))
+    existing_investigations = result.scalars().first()
+
+    if not existing_investigations:
+        default_investigation = Investigations(
+            id=1,
+            user_id=1,
+            wallet_id=1,
+            transaction_id=1,
+            status=1
+        )
+        session.add(default_investigation)
+        await session.commit()
+        print("Investigation Seed Successful")
