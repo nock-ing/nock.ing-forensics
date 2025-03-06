@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.security import verify_access_token
 from app.database.database import get_db
-from app.database.crud import get_user_by_username
-from app.schema.schema import UserBase
+from app.schema.user import UserBase
+from app.utils.user_utils import get_user_by_username
 
 
 async def get_current_user(

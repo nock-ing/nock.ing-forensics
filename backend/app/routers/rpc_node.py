@@ -3,7 +3,6 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.dependencies import get_current_active_user
-from app.schema.walletschema import WalletForensicsRequest
 from app.utils.redis_service import RedisService, get_redis_service
 from app.utils.bitcoin_rpc import bitcoin_rpc_call
 

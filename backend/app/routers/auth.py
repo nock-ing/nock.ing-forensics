@@ -3,11 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from app.database.database import get_db
-from app.database.crud import get_user_by_username, create_user
-from app.schema.schema import Token, UserCreate
+from app.database.crud_user import create_user
+from app.schema.user import Token, UserCreate
 from app.auth.security import create_access_token, verify_password
 from app.config.config import settings
 from app.utils.redis_service import RedisService, get_redis_service
+from app.utils.user_utils import get_user_by_username
 
 router = APIRouter()
 
