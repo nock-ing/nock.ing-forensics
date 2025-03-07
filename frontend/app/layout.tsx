@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "./providers/AuthProvider";
 import {ThemeProvider} from "@/components/ThemeProvider";
+import {ReactScan} from "@/components/ReactScan";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -15,7 +16,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+        <ReactScan />
+    <body>
       <ThemeProvider
         attribute={'class'}
         defaultTheme={'system'}
