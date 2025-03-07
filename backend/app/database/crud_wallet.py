@@ -1,6 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from app.schema.wallet import Wallet
+from app.models.wallets import Wallets
 
 
 async def create_wallet(db: AsyncSession, wallet: Wallet):
@@ -16,3 +18,8 @@ async def create_wallet(db: AsyncSession, wallet: Wallet):
     await db.refresh(db_wallet)
 
     return db_wallet
+
+async def check_wallet_exists(db: AsyncSession, wallet_id: int):
+    result = await db.execute(select(Wallets).filter_by(id=wallet_id))
+    wallet = result.scalars().first()
+    return wallet is not None

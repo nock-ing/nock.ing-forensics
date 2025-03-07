@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from app.database.seed import seed_users, seed_blocks, seed_wallets, seed_tx, seed_investigations
 from app.models.users import SQLModel
 from app.database.database import engine, get_db
-from app.routers import auth, redis, users, rpc_node
+from app.routers import auth, redis, users, rpc_node, investigation
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Define the lifespan context manager
@@ -33,6 +33,7 @@ app.include_router(auth.router, tags=["auth"])
 app.include_router(users.router, tags=["users"])
 app.include_router(rpc_node.router, tags=["rpc_node"])
 app.include_router(redis.router, tags=["redis"])
+app.include_router(investigation.router)
 
 @app.get("/health")
 async def health_check():

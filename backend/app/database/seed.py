@@ -91,7 +91,7 @@ async def seed_investigations(session: AsyncSession):
 
     if not existing_investigations:
         default_investigation = Investigations(
-            id=1,
+            id=0,
             user_id=1,
             wallet_id=1,
             transaction_id=1,
