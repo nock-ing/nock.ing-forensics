@@ -5,3 +5,4 @@ from typing import Optional
 
 class CoinAge(SQLModel, table=True):
     id: int = Field(primary_key=True)
+    block_hash: Optional[str] = Field()
