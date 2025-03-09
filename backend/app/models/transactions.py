@@ -20,7 +20,8 @@ class Transactions(SQLModel, table=True):
     fee: Optional[float] = Field(default=0.0)
     suspicious_illegal_activity: Optional[bool] = Field(default=False)
 
-    user: "Users" = Relationship(back_populates="transactions")
-    wallet: "Wallets" = Relationship(back_populates="transactions")
-    block: "Blocks" = Relationship(back_populates="transactions")
+    user: Optional["Users"] = Relationship(back_populates="transactions")
+    wallet: Optional["Wallets"] = Relationship(back_populates="transactions")
+    block: Optional["Blocks"] = Relationship(back_populates="transactions")
+
     investigations: List["Investigations"] = Relationship(back_populates="transaction")

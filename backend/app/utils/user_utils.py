@@ -6,5 +6,8 @@ from app.models.users import Users
 
 async def get_user_by_username(db: AsyncSession, username: str):
     result = await db.execute(select(Users).where(Users.username.__eq__(username)))
-    return result.scalars().first()
 
+    if result is None:
+        return None
+    user = result.scalars().first()
+    return user
