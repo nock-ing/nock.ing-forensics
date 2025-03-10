@@ -6,6 +6,15 @@ from app.database.crud_wallet import check_wallet_exists
 from app.models.investigations import Investigations
 from app.schema.investigation import Investigation
 
+async def get_investigations(db: AsyncSession) -> Investigations:
+    result = await db.execute(select(Investigations))
+    investigations = result.scalars().all()
+    return investigations
+
+async def get_investigation(db: AsyncSession, investigation_id: int) -> Investigations:
+    result = await db.execute(select(Investigations).filter_by(id=investigation_id))
+    investigation = result.scalars().first()
+    return investigation
 
 async def create_investigation_crud(db: AsyncSession, investigation: Investigation) -> int:
     db_investigation = Investigations(
