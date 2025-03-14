@@ -1,13 +1,14 @@
-import { NextResponse } from 'next/server';
 import {getBearerTokenFromHeaders} from "@/lib/auth";
+import {NextResponse} from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+
 
 export async function GET() {
     try {
         const token = await getBearerTokenFromHeaders();
 
-        const response = await fetch(`${BACKEND_URL}/node-info`, {
+        const response = await fetch(`${BACKEND_URL}/recent-txids`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
             },
@@ -17,8 +18,8 @@ export async function GET() {
 
         if (!response.ok) {
             return NextResponse.json(
-                { detail: data.detail || 'Failed to fetch node information' },
-                { status: response.status }
+                {detail: data.detail || 'Failed to fetch node information'},
+                {status: response.status}
             );
         }
 
@@ -26,8 +27,8 @@ export async function GET() {
     } catch (error: unknown) {
         console.error('Node info fetch error:', error);
         return NextResponse.json(
-            { detail: 'Internal server error' },
-            { status: 500 }
+            {detail: 'Internal server error'},
+            {status: 500}
         );
     }
 }

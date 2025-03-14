@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -166,6 +167,11 @@ async def transaction_forensics(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @router.get("/tx-info", response_model=dict)
 async def get_tx_info(
@@ -173,7 +179,6 @@ async def get_tx_info(
     current_user: dict = Depends(get_current_active_user),
     redis_service: RedisService = Depends(get_redis_service),
 ):
-    
     """
     Fetch details about a specific transaction by its txid.
     Uses Redis to cache results for quicker response times.
@@ -183,6 +188,9 @@ async def get_tx_info(
         cached_tx = redis_service.get(cache_key)
         if cached_tx:
             return json.loads(cached_tx)
+        logger.info("Fetching transaction details from the Bitcoin node.")
+        logger.info(cache_key)
+        logger.info(cached_tx)
 
         # Fetch transaction details from the Bitcoin node
         raw_tx = bitcoin_rpc_call("getrawtransaction", [txid, True])
@@ -201,7 +209,6 @@ async def get_tx_info(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/mempool/tx/info", response_model=dict)
 async def get_tx_info_mempool(
@@ -225,10 +232,12 @@ async def get_tx_info_mempool(
                 status_code=404, detail=f"Transaction {txid} not found."
             )
 
-        redis_service.lpush_trim("txid", txid)
+        redis_service.lpush_trim("txid", json.dumps({
+            "txid": txid,
+            "added": datetime.now().isoformat()
+        }))
         redis_service.set(cache_key, json.dumps({
             "txid": txid,
-            "transaction": tx_info
         }))
 
         return {
@@ -274,7 +283,10 @@ async def get_tx_wallet(
             "txid": txid,
             "scriptpubkey_address": scriptpubkey_address,
         }))
-        redis_service.lpush_trim("wallet", scriptpubkey_address)
+        redis_service.lpush_trim("wallet", json.dumps({
+            "wallet": scriptpubkey_address,
+            "added": datetime.now().isoformat()
+        }))
 
         return {
             "txid": txid,
@@ -321,7 +333,10 @@ async def get_coin_age_by_txid(
             "age_in_days": round(age_in_days, 2),
         }))
 
-        redis_service.lpush_trim("txid", hashid)
+        redis_service.lpush_trim("txid", json.dumps({
+            "txid": hashid,
+            "added": datetime.now().isoformat()
+        }))
 
         return {
             "hashid": hashid,
@@ -416,7 +431,10 @@ async def get_address_txs(
                 status_code=404, detail=f"Address {address} not found."
             )
         
-        redis_service.lpush_trim("wallet", address)
+        redis_service.lpush_trim("wallet", json.dumps({
+            "wallet": address,
+            "added": datetime.now().isoformat()
+        }))
         
         redis_service.set(address, json.dumps({
             "address": address,

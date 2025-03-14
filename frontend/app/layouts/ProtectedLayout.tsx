@@ -20,12 +20,11 @@ export default function ProtectedLayout({
     return (
         <ProtectedRoute>
             <div className="protected-layout">
-                {/* Add your protected layout components here (e.g., sidebar, nav) */}
                 {
                     !isDashboard ? (
                         <SidebarProvider>
                             <AppSidebar/>
-                            <main className={"border-border"}>
+                            <main className={"border-border w-full"}>
                                 <SidebarTrigger/>
                                 {children}
                             </main>

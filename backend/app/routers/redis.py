@@ -37,3 +37,21 @@ async def get_recent_wallets(
         return recent_wallets
     except Exception as e:
         raise HTTPException(status_code=498, detail=str(e))
+
+@router.delete("/empty-redis", response_model=dict)
+async def empty_redis(
+        redis_service: RedisService = Depends(get_redis_service),
+        current_user=Depends(get_current_active_user)
+):
+    """
+    Empty the Redis cache.
+    """
+    try:
+        redis_service.empty_redis()
+        return {"message": "Redis cache emptied"}
+    except Exception as e:
+        raise HTTPException(status_code=498, detail=str(e))
+
+@router.get("/debug/redis-txid")
+async def debug_redis_txid(redis_service: RedisService = Depends(get_redis_service)):
+    return redis_service.redis.lrange("txid", 0, 10)

@@ -14,6 +14,7 @@ import type { RelatedTransactionsProps } from "@/components/RelatedTransactions/
 import type { TransactionDetailsProps } from "@/types/transactions.types"
 import type { WalletAddressFromTxId } from "@/components/WalletAddressFromTxId/walletAddressFromTxId.types"
 import type { CoinAgeData } from "@/types/coinAgeData.types"
+import Link from "next/link";
 
 export default function ForensicsPage() {
     const searchParams = useSearchParams()
@@ -172,8 +173,12 @@ export default function ForensicsPage() {
         router.push(`/forensics?input=${newInput}&isTxid=true`)
     }
 
+    console.log("wallet", wallet)
+    console.log("transaction", transaction)
+    console.log("mempoolTx", mempoolTx)
+    console.log("coinAgeData", coinAgeData)
     return (
-        <div className="p-4 space-y-6">
+        <div className="p-4 space-y-6 w-full">
             <h1 className="text-2xl font-bold mb-4">Forensics Analysis</h1>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -190,8 +195,21 @@ export default function ForensicsPage() {
 
             {input && (
                 <>
-                    <div className={"mt-4"}>
+                    <div className={"mt-4 flex justify-between items-center"}>
                         <WalletAddressFromTxid txid={wallet?.txid} scriptpubkey_address={wallet?.scriptpubkey_address} />
+
+                        <div className={"space-x-4"}>
+                            <Link href={`/investigation?input=${input}`}>
+                                <Button>
+                                    Start Investigation
+                                </Button>
+                            </Link>
+                            <Link href={"#"}>
+                                <Button>
+                                    Save
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
                     <TransactionInfo isTxid={isTxid} input={input} transaction={transaction} mempoolTransaction={mempoolTx} />
                 </>

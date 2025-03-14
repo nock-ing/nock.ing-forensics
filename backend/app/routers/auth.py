@@ -78,3 +78,14 @@ async def logout(response: Response, token: str = Depends(oauth2_scheme),
     )
     return {"message": "Logout successful"}
 
+
+# Validate route token
+@router.get("/validate-token")
+async def validate_token(token: str = Depends(oauth2_scheme), redis_service: RedisService = Depends(get_redis_service)):
+    token_data = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    # check if token is denylisted
+    jti = token_data.get("jti")
+    if redis_service.get(f"denylist:{jti}"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+    return {"message": "Token is valid"}
+

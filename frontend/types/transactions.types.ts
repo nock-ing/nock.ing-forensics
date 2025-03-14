@@ -20,6 +20,14 @@ export type MempoolTransaction = {
         scriptpubkey: string
         scriptpubkey_address: string
         value: number
+        scriptPubKey: {
+            asm: string
+            hex: string
+            reqSigs: number
+            type: string
+            addresses: string[]
+            address: string
+        }
     }>
     status: {
         confirmed: boolean
