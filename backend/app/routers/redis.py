@@ -7,7 +7,7 @@ from app.auth.security import get_jti
 from app.utils.redis_service import get_redis_service, RedisService
 
 
-router = APIRouter()
+router = APIRouter(prefix="/redis", tags=["redis"])
 
 @router.get("/recent-txids", response_model=list)
 async def get_recent_txids(
@@ -20,6 +20,7 @@ async def get_recent_txids(
     try:
         recent_txids = redis_service.get_recent_list("txid")
         return recent_txids
+
     except Exception as e:
         raise HTTPException(status_code=498, detail=str(e))
 
@@ -55,3 +56,7 @@ async def empty_redis(
 @router.get("/debug/redis-txid")
 async def debug_redis_txid(redis_service: RedisService = Depends(get_redis_service)):
     return redis_service.redis.lrange("txid", 0, 10)
+
+@router.get("/related-tx")
+async def get_related_tx(txid: str, redis_service: RedisService = Depends(get_redis_service)):
+    return redis_service.get(f"flow-tx-info:{txid}")

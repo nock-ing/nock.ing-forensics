@@ -8,7 +8,10 @@ class RedisService:
     def get(self, key):
         value = self.redis.get(key)
         if value:
-            return value.decode()
+            try:
+                return json.loads(value.decode())
+            except json.JSONDecodeError:
+                return value.decode()
         return None
 
     def set(self, key, value, expiry=None):
