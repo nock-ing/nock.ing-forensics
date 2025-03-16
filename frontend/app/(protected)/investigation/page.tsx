@@ -1,61 +1,62 @@
 "use client";
-import {Button} from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useSearchParams } from 'next/navigation'
-import {useEffect, useState} from "react";
-import {ReactFlow, useNodesState, useEdgesState} from "@xyflow/react";
+import { useSearchParams } from "next/navigation";
+import {
+    useCallback,
+    useEffect,
+    useState
+} from "react";
+import {
+    ReactFlow,
+    useNodesState,
+    useEdgesState,
+    applyNodeChanges,
+    applyEdgeChanges,
+    Background
+} from "@xyflow/react";
+
+
+import "@xyflow/react/dist/style.css";
+import {AnimatedSvgEdge} from "@/components/animated-svg-edge";
 
 type RelatedTxData = {
-    id: string
+    id: string;
     data: {
-        label: string
-    }
+        label: string;
+    };
     position: {
         x: number;
         y: number;
-    }
-
-    related_txids: {
-        txid: {
-            id: string
-            data: {
-                label: string
-            }
-            position: {
-                x: number;
-                y: number;
-            }
+    };
+    related_txids: Record<
+        string,
+        {
+            id: string;
+            data: { label: string };
+            position: { x: number; y: number };
         }
-    }[]
-}
+    >;
+};
 
 export default function Page() {
     const searchParams = useSearchParams();
-    const search = searchParams.get('txid')
-    const [relatedTxData, setRelatedTxData] = useState<RelatedTxData>()
+    const search = searchParams.get("txid");
 
-    const initialNodes = [
-        {
-            id: relatedTxData?.id,
-            data: { label: relatedTxData?.data.label },
-            position: relatedTxData?.position
-        }
-    ];
+    const [relatedTxData, setRelatedTxData] = useState<RelatedTxData>();
 
-    const initialEdges = [
-        relatedTxData?.related_txids.map((relatedTx) => ({
-            id: `${relatedTx.txid.id}-${relatedTx.txid.id}`,
-            source: relatedTx.txid.id,
-            target: relatedTx.txid.id,
-            animated: true
-        }))
-    ]
+    // React Flow states
+    const [nodes, setNodes, onNodesChange] = useNodesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+    // 1) Define your custom edge type
+    const edgeTypes = {
+        animatedSvgEdge: AnimatedSvgEdge,
+    };
 
     useEffect(() => {
         async function fetchRelatedTx() {
+            if (!search) return;
             const response = await fetch(`/api/redis-related-tx?txid=${search}`);
             const data = await response.json();
             setRelatedTxData(data);
@@ -63,27 +64,79 @@ export default function Page() {
         fetchRelatedTx();
     }, [search]);
 
+    useEffect(() => {
+        if (!relatedTxData) return;
 
+        // Create the main node
+        const mainNode = {
+            id: relatedTxData.id,
+            data: relatedTxData.data,
+            position: relatedTxData.position,
+            type: "input", // or 'default'
+        };
 
+        // Create related nodes from the object
+        const relatedNodes = Object.values(relatedTxData.related_txids).map((txObj) => ({
+            id: txObj.id,
+            data: txObj.data,
+            position: txObj.position,
+            type: "default",
+        }));
+
+        // Combine all nodes
+        const newNodes = [mainNode, ...relatedNodes];
+
+        // Build edges using the custom 'animatedSvgEdge' type
+        const newEdges = Object.values(relatedTxData.related_txids).map((txObj) => ({
+            id: `${mainNode.id}-${txObj.id}`,
+            source: mainNode.id,
+            target: txObj.id,
+            type: "animatedSvgEdge",
+            // Pass any props you want to the AnimatedSvgEdge via 'data'
+            data: {
+                duration: 2,         // how fast the animation flows
+                shape: "package",    // dot shape, "package" is from the example
+                path: "smoothstep",  // or "straight", "bezier", etc.
+            },
+        }));
+
+        setNodes(newNodes);
+        setEdges(newEdges);
+    }, [relatedTxData]);
+
+    console.log(relatedTxData)
+
+    const handleNodesChange = useCallback(
+        (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
+        []
+    );
+
+    const handleEdgesChange = useCallback(
+        (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+        []
+    );
 
     return (
         <div>
-            { /* TODO: Show details passed from link here */ }
-            <h1>Investigation Detail for {search} </h1>
-
+            <h1>Investigation Detail for {search}</h1>
             <Link href={"/investigations"}>
-            <Button>
-                Back to Investigations
-            </Button>
+                <Button>Back to Investigations</Button>
             </Link>
-            <div style={{ width: '100vw', height: '100vh' }}>
+
+            <div style={{ width: "100vw", height: "100vh" }}>
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}
-
+                    onNodesChange={handleNodesChange}
+                    onEdgesChange={handleEdgesChange}
+                    fitView
+                    // 2) Use the custom edge types in your <ReactFlow>
+                    edgeTypes={edgeTypes}
                 >
+                    {/* Optional: add a nice grid background */}
+                    <Background />
                 </ReactFlow>
             </div>
         </div>
-    )
+    );
 }
