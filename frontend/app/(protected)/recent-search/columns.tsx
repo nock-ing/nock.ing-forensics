@@ -46,7 +46,7 @@ export const columns: ColumnDef<TransactionId>[] = [
                             Copy Transaction ID
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <Link href={`/investigation?input=${txid.txid}`}><DropdownMenuItem>Create Investigation</DropdownMenuItem></Link>
+                        <Link href={`/investigation?txid=${txid.txid}`}><DropdownMenuItem>Create Investigation</DropdownMenuItem></Link>
                     </DropdownMenuContent>
                 </DropdownMenu>
             )
