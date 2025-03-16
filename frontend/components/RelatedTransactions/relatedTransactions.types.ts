@@ -1,4 +1,4 @@
-export interface Transaction {
+export interface RelatedTransaction {
     txid: string
     details: {
         confirmations: number
@@ -25,5 +25,5 @@ export interface Transaction {
 }
 
 export interface RelatedTransactionsProps {
-    related_transactions: Transaction[]
+    related_transactions: RelatedTransaction[] | { related_transactions: RelatedTransaction[] }
 }

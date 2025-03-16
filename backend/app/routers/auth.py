@@ -3,14 +3,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 from app.database.database import get_db
-from app.database.crud import get_user_by_username, create_user
-from app.schema.schema import Token, UserCreate
-from app.auth.security import create_access_token, verify_password
+from app.database.crud_user import create_user
+from app.schema.user import Token, UserCreate
+from app.auth.security import create_access_token, verify_password, oauth2_scheme
 from app.config.config import settings
 from app.utils.redis_service import RedisService, get_redis_service
+from app.utils.user_utils import get_user_by_username
+import jwt
 
 router = APIRouter()
-
 
 @router.post("/login", response_model=Token)
 async def login_for_access_token(
@@ -44,7 +45,8 @@ async def login_for_access_token(
 
 @router.post("/register")
 async def register(
-        user: UserCreate, db: AsyncSession = Depends(get_db)
+        user: UserCreate,
+        db: AsyncSession = Depends(get_db)
 ):
     existing_user = await get_user_by_username(db, user.username)
     if existing_user:
@@ -53,10 +55,17 @@ async def register(
             detail="Username already registered",
         )
     await create_user(db, user)
-    return {"message": "User created successfully"}
+    return {"username": user.username}
+
 
 @router.post("/logout")
-async def logout(response: Response):
+async def logout(response: Response, token: str = Depends(oauth2_scheme),
+                 redis_service: RedisService = Depends(get_redis_service)):
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    jti = payload.get("jti")
+    if jti:
+        redis_service.set(f"denylist:{jti}", "denylisted", expiry=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+
     response.set_cookie(
         key="token",
         value="",
@@ -68,3 +77,15 @@ async def logout(response: Response):
         path="/"
     )
     return {"message": "Logout successful"}
+
+
+# Validate route token
+@router.get("/validate-token")
+async def validate_token(token: str = Depends(oauth2_scheme), redis_service: RedisService = Depends(get_redis_service)):
+    token_data = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    # check if token is denylisted
+    jti = token_data.get("jti")
+    if redis_service.get(f"denylist:{jti}"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+    return {"message": "Token is valid"}
+

@@ -16,3 +16,9 @@ export const getConfirmationStatus = (confirmations: number | undefined): string
 export const satoshisToBTC = (satoshis: number): string => {
     return (satoshis / 1e8).toFixed(8) + " BTC"
 }
+
+export const convertIsoDateToLocaleString = (isoDate: string): string => {
+    // remove microseconds
+    const safeDate = isoDate.split('.')[0];
+    return new Date(safeDate).toLocaleString();
+};

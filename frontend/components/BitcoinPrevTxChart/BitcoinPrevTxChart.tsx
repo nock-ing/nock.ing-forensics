@@ -3,14 +3,18 @@ import { BarChart, XAxis, YAxis, Bar, Tooltip, LineChart, CartesianGrid, Line } 
 import { RelatedTransactionsProps } from "@/components/RelatedTransactions/relatedTransactions.types";
 
 const TransactionCharts: React.FC<RelatedTransactionsProps> = ({ related_transactions }) => {
+    const normalizedRelatedTransactions = Array.isArray(related_transactions)
+        ? related_transactions
+        : related_transactions?.related_transactions ?? [];
+
     // Data for the bar chart - Bitcoin value used per transaction
-    const bitcoinValueData = related_transactions.map((tx) => ({
+    const bitcoinValueData = normalizedRelatedTransactions.map((tx) => ({
         txid: tx.txid,
         totalValue: tx.details.vout.reduce((acc, output) => acc + output.value, 0), // Total Bitcoin value in BTC
     }));
 
     // Data for the line chart - Transaction size
-    const transactionSizeData = related_transactions.map((tx) => ({
+    const transactionSizeData = normalizedRelatedTransactions.map((tx) => ({
         txid: tx.txid,
         size: tx.details.size,
     }));

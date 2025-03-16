@@ -5,7 +5,7 @@ def mempool_api_call(method: str, params=None):
     if params is None:
         params = []
 
-    url = f"http://umbrel.local:3006/{method}"
+    url = f"http://umbrel.remote:3006/{method}"
     headers = {'content-type': 'application/json'}
 
     response = requests.get(url, headers=headers)

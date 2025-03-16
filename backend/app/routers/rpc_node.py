@@ -1,16 +1,20 @@
 import json
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.dependencies import get_current_active_user
-from app.schema.walletschema import WalletForensicsRequest
 from app.utils.redis_service import RedisService, get_redis_service
 from app.utils.bitcoin_rpc import bitcoin_rpc_call
+import logging
+
 
 from collections import defaultdict
 
 from app.utils.mempool_api import mempool_api_call
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -54,6 +58,8 @@ async def get_latest_blocks(
         # if count changes, we need to update the cache
         cached_latest_blocks = redis_service.get("latest_blocks")
         if (cached_latest_blocks):
+            if (isinstance(cached_latest_blocks, dict)):
+                return cached_latest_blocks
             cached_latest_blocks = json.loads(cached_latest_blocks)
             if (len(cached_latest_blocks["latest_blocks"]) != count):
                 redis_service.delete("latest_blocks")
@@ -104,11 +110,15 @@ async def transaction_forensics(
     """Related Transactions, connecting them by inputs and outputs."""
 
     try:
-        cache_key = f"{txid}:{depth}"  # Unique cache key per depth value
+        cache_key = f"{txid}:{depth}"
         cached_related_tx = redis_service.get(cache_key)
+        flow_cache_key = f"flow-tx-info:{txid}"
 
         if cached_related_tx:
-            return {"related_transactions": json.loads(cached_related_tx)}
+            # check if its a dict, if not, return the cached value
+            if isinstance(cached_related_tx, dict):
+                return cached_related_tx
+            return json.loads(cached_related_tx)
 
         # Fetch raw transaction details
         raw_tx = bitcoin_rpc_call("getrawtransaction", [txid, True])
@@ -158,6 +168,24 @@ async def transaction_forensics(
                 if len(related_transactions) >= depth:
                     break
 
+        # Cache the result for reactflow
+        # we need id, label, position (can be 0,0)
+        related_txids = [tx["txid"] for tx in related_transactions]
+        redis_service.set(flow_cache_key, json.dumps({
+            "id": txid,
+            "data": {"label": txid},
+            "position": {"x": 0, "y": 0},
+            "related_txids": {
+                tx["txid"]: {
+                    "id": tx["txid"],
+                    "data": {"label": tx["txid"]},
+                    "position": {"x": 0, "y": 0},
+                }
+                for tx in related_transactions
+
+            }
+        }))
+
         redis_service.set(cache_key, json.dumps({
             "related_transactions": related_transactions[:depth]
         }))
@@ -174,7 +202,6 @@ async def get_tx_info(
     current_user: dict = Depends(get_current_active_user),
     redis_service: RedisService = Depends(get_redis_service),
 ):
-    
     """
     Fetch details about a specific transaction by its txid.
     Uses Redis to cache results for quicker response times.
@@ -183,7 +210,13 @@ async def get_tx_info(
     try:
         cached_tx = redis_service.get(cache_key)
         if cached_tx:
+            if isinstance(cached_tx, dict):
+                return cached_tx
             return json.loads(cached_tx)
+
+        logger.info("Fetching transaction details from the Bitcoin node.")
+        logger.info(cache_key)
+        logger.info(cached_tx)
 
         # Fetch transaction details from the Bitcoin node
         raw_tx = bitcoin_rpc_call("getrawtransaction", [txid, True])
@@ -203,7 +236,6 @@ async def get_tx_info(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/mempool/tx/info", response_model=dict)
 async def get_tx_info_mempool(
     txid: str,
@@ -213,10 +245,12 @@ async def get_tx_info_mempool(
     """
     Fetch all transactions related to a given address.
     """
-    cache_key = f"tx-info:{txid}"
+    cache_key = f"tx-info-mempool:{txid}"
     try:
         cached_tx = redis_service.get(cache_key)
         if cached_tx:
+            if isinstance(cached_tx, dict):
+                return cached_tx
             return json.loads(cached_tx)
         # Fetch address transactions
         tx_info = mempool_api_call(f"api/tx/{txid}")
@@ -226,10 +260,13 @@ async def get_tx_info_mempool(
                 status_code=404, detail=f"Transaction {txid} not found."
             )
 
-        redis_service.lpush_trim("txid", txid)
+        redis_service.lpush_trim("txid", json.dumps({
+            "txid": txid,
+            "added": datetime.now().isoformat()
+        }))
         redis_service.set(cache_key, json.dumps({
             "txid": txid,
-            "transaction": tx_info
+            "transaction": tx_info,
         }))
 
         return {
@@ -255,8 +292,9 @@ async def get_tx_wallet(
     try:
         cached_wallet = redis_service.get(cache_key)
         if cached_wallet:
+            if isinstance(cached_wallet, dict):
+                return cached_wallet
             return json.loads(cached_wallet)
-        
         tx_info = mempool_api_call(f"api/tx/{txid}")
 
         if not tx_info:
@@ -275,7 +313,10 @@ async def get_tx_wallet(
             "txid": txid,
             "scriptpubkey_address": scriptpubkey_address,
         }))
-        redis_service.lpush_trim("wallet", scriptpubkey_address)
+        redis_service.lpush_trim("wallet", json.dumps({
+            "wallet": scriptpubkey_address,
+            "added": datetime.now().isoformat()
+        }))
 
         return {
             "txid": txid,
@@ -322,7 +363,10 @@ async def get_coin_age_by_txid(
             "age_in_days": round(age_in_days, 2),
         }))
 
-        redis_service.lpush_trim("txid", hashid)
+        redis_service.lpush_trim("txid", json.dumps({
+            "txid": hashid,
+            "added": datetime.now().isoformat()
+        }))
 
         return {
             "hashid": hashid,
@@ -408,6 +452,8 @@ async def get_address_txs(
     try:
         cached_address = redis_service.get(address)
         if cached_address:
+            if isinstance(cached_address, dict):
+                return cached_address
             return json.loads(cached_address)
         # Fetch address transactions
         address_txs = mempool_api_call(f"api/address/{address}/txs")
@@ -417,7 +463,10 @@ async def get_address_txs(
                 status_code=404, detail=f"Address {address} not found."
             )
         
-        redis_service.lpush_trim("wallet", address)
+        redis_service.lpush_trim("wallet", json.dumps({
+            "wallet": address,
+            "added": datetime.now().isoformat()
+        }))
         
         redis_service.set(address, json.dumps({
             "address": address,

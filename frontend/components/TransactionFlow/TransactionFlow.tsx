@@ -5,6 +5,7 @@ import {formatAddress, formatBTC, satoshisToBTC} from "@/utils/formatters";
 import {MempoolTransaction} from "@/types/transactions.types";
 
 export function TransactionFlow({txData}: { txData: MempoolTransaction }) {
+    console.log(txData);
     return (
         <Card>
             <CardHeader>
@@ -18,10 +19,10 @@ export function TransactionFlow({txData}: { txData: MempoolTransaction }) {
                             {txData.vin.map((input, index) => (
                                 <div key={index} className="flex items-center space-x-2 text-sm">
                                 <span className="font-medium">
-                                    {formatAddress(input.prevout.scriptpubkey_address)}
+                                    {input.prevout ? formatAddress(input.prevout.scriptpubkey_address) : 'Prevout not part of the given Txid'}
                                 </span>
                                     <span className="text-muted-foreground">
-                                    {formatBTC(input.prevout.value / 100000000)}
+                                    {input.prevout ? formatBTC(input.prevout.value / 100000000) : 'Prevout not part of the given Txid'}
                                 </span>
                                 </div>
                             ))}
@@ -35,7 +36,7 @@ export function TransactionFlow({txData}: { txData: MempoolTransaction }) {
                             {txData.vout?.map((output, index) => (
                                 <div key={index} className="flex items-center space-x-2 text-sm">
                                 <span className="font-medium">
-                                    {formatAddress(output.scriptpubkey_address)}
+                                    {output.scriptpubkey_address ? formatAddress(output.scriptpubkey_address) : formatAddress(output.scriptPubKey.address)}
                                 </span>
                                     <span className="text-muted-foreground">
                                     {satoshisToBTC(output.value)}

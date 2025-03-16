@@ -1,21 +1,11 @@
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
+import {getBearerTokenFromHeaders} from "@/lib/auth";
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 
 export async function GET() {
     try {
-        const headersList = await headers();
-        const authHeader = headersList.get('authorization');
-
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json(
-                { detail: 'Invalid or missing authorization token' },
-                { status: 401 }
-            );
-        }
-
-        const token = authHeader.split('Bearer ')[1];
+        const token = await getBearerTokenFromHeaders();
 
         const response = await fetch(`${BACKEND_URL}/node-info`, {
             headers: {

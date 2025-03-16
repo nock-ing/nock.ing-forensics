@@ -1,4 +1,4 @@
-import {Transaction} from "@/components/RelatedTransactions/relatedTransactions.types";
+import {RelatedTransaction} from "@/components/RelatedTransactions/relatedTransactions.types";
 import {useState} from "react";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {ChevronDown, ChevronUp, Clock, Hash} from "lucide-react";
@@ -8,7 +8,7 @@ import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/
 import {Button} from "@/components/ui/button";
 import Link from "next/link";
 
-export default function TransactionCard({ transaction }: { transaction: Transaction }) {
+export default function TransactionCard({ transaction }: { transaction: RelatedTransaction }) {
     const [isDetailsOpen, setIsDetailsOpen] = useState(false)
 
     const formatBTC = (amount: number) => {
