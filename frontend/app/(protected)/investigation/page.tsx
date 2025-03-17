@@ -16,6 +16,15 @@ import '@xyflow/react/dist/style.css';
 import { AnimatedSvgEdge } from '@/components/animated-svg-edge';
 import { ZoomSlider } from '@/components/zoom-slider';
 
+import { formatAddress } from '@/utils/formatters';
+import { cx } from 'class-variance-authority';
+import { log } from 'node:console';
+import { LabeledGroupNode } from '@/components/labeled-group-node';
+
+const nodeTypes = {
+  group: LabeledGroupNode,
+};
+
 type RelatedTxData = {
   id: string;
   data: {
@@ -41,11 +50,9 @@ export default function Page() {
 
   const [relatedTxData, setRelatedTxData] = useState<RelatedTxData>();
 
-  // React Flow states
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // 1) Define your custom edge type
   const edgeTypes = {
     animatedSvgEdge: AnimatedSvgEdge,
   };
@@ -62,27 +69,41 @@ export default function Page() {
 
   useEffect(() => {
     if (!relatedTxData) return;
-
-    // Create the main node
-    const mainNode = {
-      id: relatedTxData.id,
-      data: relatedTxData.data,
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
-      type: 'default',
+    const groupNode = {
+      id: 'input-group',
+      type: 'group',
+      position: { x: 0, y: 0 },
+      data: { label: 'Input Group' },
+      style: {
+        width: 500,
+        height: 500,
+      },
+      zIndex: 0,
     };
 
-    // Create related nodes from the object
     const relatedNodes = Object.values(relatedTxData.related_txids).map(
-      (txObj) => ({
+      (txObj, i) => ({
         id: txObj.id,
-        data: txObj.data,
-        position: { x: Math.random() * 400, y: Math.random() * 400 },
+        data: { label: formatAddress(txObj.data.label) },
+        position: { x: 50, y: 50 + i * 100 }, // local to parent
         type: 'default',
+        parentNode: 'input-group',
+        extent: 'parent',
+        zIndex: 1,
       })
     );
 
-    // Combine all nodes
-    const newNodes = [mainNode, ...relatedNodes];
+    const mainNode = {
+      id: 'test',
+      data: {
+        label: 'Input Transaction',
+      },
+      position: { x: Math.random() * 400, y: Math.random() * 400 },
+      type: 'default',
+      zIndex: 2,
+    };
+
+    const newNodes = [groupNode, ...relatedNodes, mainNode];
 
     // Build edges using the custom 'animatedSvgEdge' type
     const newEdges = Object.values(relatedTxData.related_txids).map(
@@ -95,7 +116,7 @@ export default function Page() {
         data: {
           duration: 2, // how fast the animation flows
           shape: 'package', // dot shape, "package" is from the example
-          path: 'smoothstep', // or "straight", "bezier", etc.
+          path: 'straight',
         },
       })
     );
@@ -121,19 +142,41 @@ export default function Page() {
         <Button>Back to Investigations</Button>
       </Link>
 
-      <div style={{ width: '100vw', height: '100vh' }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={handleEdgesChange}
-          fitView
-          // 2) Use the custom edge types in your <ReactFlow>
-          edgeTypes={edgeTypes}
+      <div className="flex">
+        <div
+          style={{ width: '100vw', height: '100vh' }}
+          className="dark:text-black"
         >
-          <Background />
-          <ZoomSlider position="top-left" />
-        </ReactFlow>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
+            fitView
+            edgeTypes={edgeTypes}
+            nodeTypes={nodeTypes}
+          >
+            <Background />
+            <ZoomSlider position="top-left" />
+          </ReactFlow>
+        </div>
+        <div
+          style={{ width: '100vw', height: '100vh' }}
+          className="dark:text-black"
+        >
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
+            fitView
+            edgeTypes={edgeTypes}
+            nodeTypes={nodeTypes}
+          >
+            <Background />
+            <ZoomSlider position="top-left" />
+          </ReactFlow>
+        </div>
       </div>
     </div>
   );
