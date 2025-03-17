@@ -214,10 +214,6 @@ async def get_tx_info(
                 return cached_tx
             return json.loads(cached_tx)
 
-        logger.info("Fetching transaction details from the Bitcoin node.")
-        logger.info(cache_key)
-        logger.info(cached_tx)
-
         # Fetch transaction details from the Bitcoin node
         raw_tx = bitcoin_rpc_call("getrawtransaction", [txid, True])
 
@@ -338,6 +334,8 @@ async def get_coin_age_by_txid(
     try:
         cached_coin_age = redis_service.get(hashid)
         if cached_coin_age:
+            if isinstance(cached_coin_age, dict):
+                return cached_coin_age
             return json.loads(cached_coin_age)
         
         raw_tx = bitcoin_rpc_call("getrawtransaction", [hashid, True])
@@ -393,6 +391,8 @@ async def get_coin_age_by_address(
         
         cached_coin_age = redis_service.get(address)
         if cached_coin_age:
+            if isinstance(cached_coin_age, dict):
+                return cached_coin_age
             return json.loads(cached_coin_age)
         
         # Fetch unspent outputs for the address
