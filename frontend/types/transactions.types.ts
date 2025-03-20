@@ -80,7 +80,6 @@ export interface TransactionDetailsProps {
 
 
 export interface TransactionInfoProps {
-    isTxid: boolean
     input: string
     transaction: TransactionDetailsProps | undefined
     mempoolTransaction: TransactionDetailsProps | undefined

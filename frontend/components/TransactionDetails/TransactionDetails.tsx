@@ -8,7 +8,6 @@ import { formatAddress, formatBTC, getConfirmationStatus } from "@/utils/formatt
 
 export function TransactionDetails({ txData }: { txData: Transaction }) {
 
-
     return (
         <Card>
             <CardHeader>

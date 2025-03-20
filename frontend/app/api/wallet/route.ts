@@ -1,16 +1,16 @@
 import { getBearerTokenFromHeaders } from '@/lib/auth';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const txid = url.searchParams.get('txid');
+    const wallet = url.searchParams.get('address');
     const token = await getBearerTokenFromHeaders();
 
     const response = await fetch(
-      `${BACKEND_URL}/redis/related-tx?txid=${txid}`,
+      `${BACKEND_URL}/address/wallet?address=${wallet}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -19,7 +19,6 @@ export async function GET(req: Request) {
     );
 
     const data = await response.json();
-
     if (!response.ok) {
       return NextResponse.json(
         { detail: data.detail || 'Failed to fetch node information' },

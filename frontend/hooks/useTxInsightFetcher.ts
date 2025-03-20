@@ -73,7 +73,7 @@ export function useTxInsightFetcher(input: string, isTxid: boolean) {
         } finally {
             setLoading(false);
         }
-    }, [input, isTxid]); // <== Memoize based on input/isTxid
+    }, [input, isTxid]); 
 
     return {
         coinAgeData,
