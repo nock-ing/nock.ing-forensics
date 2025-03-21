@@ -12,6 +12,7 @@ import WalletAddressFromTxid from "@/components/WalletAddressFromTxId/WalletAddr
 import Link from "next/link";
 import {useTxInsightFetcher} from "@/hooks/useTxInsightFetcher";
 import { useWalletInsightFetcher } from "@/hooks/useWalletInsightFetcher";
+import {WalletTransactionsDisplay} from "@/components/WalletTransactionsDisplay";
 
 
 export default function ForensicsPage() {
@@ -62,7 +63,6 @@ export default function ForensicsPage() {
         e.preventDefault()
         router.push(`/forensics?input=${newInput}&isTxid=true`)
     }
-
 
     return (
         <div className="p-4 space-y-6 w-full">
@@ -132,41 +132,43 @@ export default function ForensicsPage() {
             )}
 
             {!isTxid && walletData && walletTransactions && (
-                <div className="space-y-4">
-                    <h2 className="text-xl font-semibold">Wallet Data Analysis</h2>
-                    {walletLoading && (
-                        <div className="space-y-2">
-                            <div className="h-8 bg-muted animate-pulse rounded"/>
-                            <div className="h-24 bg-muted animate-pulse rounded"/>
-                            <div className="h-8 bg-muted animate-pulse rounded"/>
-                        </div>
-                    )}
-                    {walletError && <p className="text-destructive">{walletError}</p>}
-                    {!walletLoading && !walletError && (
-                        <>
-                            <div className="bg-card py-4 px-6 rounded shadow">
-                                <h3 className="text-lg font-medium">Wallet Address</h3>
-                                <p className="text-muted-foreground">{walletData?.wallet}</p>
+                <>
+                    <div>
+                        <WalletTransactionsDisplay data={walletTransactions}/>
+                    </div>
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-semibold">Wallet Data Analysis</h2>
+                        {walletLoading && (
+                            <div className="space-y-2">
+                                <div className="h-8 bg-muted animate-pulse rounded"/>
+                                <div className="h-24 bg-muted animate-pulse rounded"/>
+                                <div className="h-8 bg-muted animate-pulse rounded"/>
                             </div>
-                            <div className="bg-card py-4 px-6 rounded shadow">
-                                <h3 className="text-lg font-medium">Balance</h3>
-                                <p className="text-muted-foreground">{walletData?.balance} BTC</p>
-                            </div>
-                            <div className="bg-card py-4 px-6 rounded shadow">
-                                <h3 className="text-lg font-medium">Number of Transactions received</h3>
-                                <p className="text-muted-foreground">{walletData?.tx_received}</p>
-                            </div>
-                            <div className="bg-card py-4 px-6 rounded shadow">
-                                <h3 className="text-lg font-medium">Number of Transactions sent</h3>
-                                <p className="text-muted-foreground">{walletData?.tx_coins_sum}</p>
-                            </div>
-                        </>
-                    )}
+                        )}
+                        {walletError && <p className="text-destructive">{walletError}</p>}
+                        {!walletLoading && !walletError && (
+                            <>
+                                <div className="bg-card py-4 px-6 rounded shadow">
+                                    <h3 className="text-lg font-medium">Wallet Address</h3>
+                                    <p className="text-muted-foreground">{walletData?.wallet}</p>
+                                </div>
+                                <div className="bg-card py-4 px-6 rounded shadow">
+                                    <h3 className="text-lg font-medium">Balance</h3>
+                                    <p className="text-muted-foreground">{walletData?.balance} BTC</p>
+                                </div>
+                                <div className="bg-card py-4 px-6 rounded shadow">
+                                    <h3 className="text-lg font-medium">Number of Transactions received</h3>
+                                    <p className="text-muted-foreground">{walletData?.tx_received}</p>
+                                </div>
+                                <div className="bg-card py-4 px-6 rounded shadow">
+                                    <h3 className="text-lg font-medium">Number of Transactions sent</h3>
+                                    <p className="text-muted-foreground">{walletData?.tx_coins_sum}</p>
+                                </div>
+                            </>
+                        )}
 
-                    <pre>
-                        {JSON.stringify(walletTransactions, null, 2)}
-                    </pre>
-                </div>
+                    </div>
+                </>
             )}
         </div>
     )
