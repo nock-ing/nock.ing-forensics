@@ -1,12 +1,13 @@
 
 export type WalletData = {
-    wallet: number;
-    tx_received: number;
-    tx_value_received: number;
-    tx_coins_spent: number;
-    tx_coins_sum: number;
+    address: number;
+    total_received_sats: number;
+    total_sent_sats: number;
+    total_received_btc: number;
+    total_sent_btc: number;
     balance_sats: number;
-    balance: number;
+    balance_btc: number;
+    tx_count: number;
 }
 
 type ScriptPubKey = {
