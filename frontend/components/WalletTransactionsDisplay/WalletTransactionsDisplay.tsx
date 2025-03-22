@@ -15,18 +15,20 @@ import {
     CardHeader,
     CardTitle
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { WalletTxData } from "@/types/wallet.types";
-import { Copy, ExternalLink } from "lucide-react"; // Import the icon components
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {Badge} from "@/components/ui/badge";
+import {ScrollArea} from "@/components/ui/scroll-area";
+import {WalletTxData} from "@/types/wallet.types";
+import {Copy, ExternalLink} from "lucide-react"; // Import the icon components
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import Link from "next/link";
+import {satoshisToBTC} from "@/utils/formatters";
+import {copyToClipboard} from "@/utils/copyToClipboard";
 
 interface WalletTransactionsDisplayProps {
     data: WalletTxData;
 }
 
-export function WalletTransactionsDisplay({ data }: WalletTransactionsDisplayProps) {
+export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps) {
     if (!data || !data.transactions || data.transactions.length === 0) {
         return (
             <Card>
@@ -37,23 +39,6 @@ export function WalletTransactionsDisplay({ data }: WalletTransactionsDisplayPro
             </Card>
         );
     }
-
-    // Format satoshis to BTC
-    const formatBTC = (satoshis: number) => {
-        return (satoshis / 100000000).toFixed(8);
-    };
-
-    // Function to copy text to clipboard
-    const copyToClipboard = (text: string) => {
-        navigator.clipboard.writeText(text)
-            .then(() => {
-                // You could add a toast notification here
-                console.log('Copied to clipboard');
-            })
-            .catch(err => {
-                console.error('Failed to copy: ', err);
-            });
-    };
 
     return (
         <Card className="w-full">
@@ -90,7 +75,7 @@ export function WalletTransactionsDisplay({ data }: WalletTransactionsDisplayPro
                                                             onClick={() => copyToClipboard(tx.txid)}
                                                             className="text-muted-foreground hover:text-primary"
                                                         >
-                                                            <Copy size={16} />
+                                                            <Copy size={16}/>
                                                         </button>
                                                     </TooltipTrigger>
                                                     <TooltipContent>
@@ -105,7 +90,7 @@ export function WalletTransactionsDisplay({ data }: WalletTransactionsDisplayPro
                                                             href={`/forensics?input=${tx.txid}&isTxid=true`}
                                                             className="text-muted-foreground hover:text-primary"
                                                         >
-                                                            <ExternalLink size={16} />
+                                                            <ExternalLink size={16}/>
                                                         </Link>
                                                     </TooltipTrigger>
                                                     <TooltipContent>
@@ -133,7 +118,8 @@ export function WalletTransactionsDisplay({ data }: WalletTransactionsDisplayPro
                                             {tx.vout.slice(0, 2).map((output, i) => (
                                                 <div key={i} className="flex justify-between truncate max-w-[180px]">
                                                     <span>{output.scriptpubkey_address || 'Unknown'}</span>
-                                                    <span className="font-medium">{formatBTC(output.value)} BTC</span>
+                                                    <span
+                                                        className="font-medium">{satoshisToBTC(output.value)} BTC</span>
                                                 </div>
                                             ))}
                                             {tx.vout.length > 2 && <div>+{tx.vout.length - 2} more</div>}

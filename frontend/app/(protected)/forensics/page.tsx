@@ -139,7 +139,8 @@ export default function ForensicsPage() {
             {!isTxid && walletData && walletTransactions && (
                 <>
                     <div>
-                        <WalletInfo walletData={walletData} walletError={walletError} walletLoading={walletLoading}/>
+                        <WalletInfo walletData={walletData} walletError={walletError} walletLoading={walletLoading}
+                                    walletTransactions={walletTransactions}/>
                     </div>
                     <div>
                         <WalletTransactionsDisplay data={walletTransactions}/>
