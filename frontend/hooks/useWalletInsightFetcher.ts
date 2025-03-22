@@ -4,7 +4,7 @@ import type {WalletData, WalletTxData} from "@/types/wallet.types";
 
 export function useWalletInsightFetcher(input: string, isTxid: boolean) {
     const [walletData, setWalletData] = useState<WalletData | null>(null);
-    const [walletTransactions, setWalletTransactions] = useState<WalletTxData[]>([]);
+    const [walletTransactions, setWalletTransactions] = useState<WalletTxData>();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 

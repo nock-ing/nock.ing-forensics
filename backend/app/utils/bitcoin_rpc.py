@@ -1,7 +1,8 @@
 from app.config.config import settings
-import requests
+import aiohttp
 
-def bitcoin_rpc_call(method: str, params=None):
+
+async def bitcoin_rpc_call(method: str, params=None):
     if params is None:
         params = []
 
@@ -15,9 +16,10 @@ def bitcoin_rpc_call(method: str, params=None):
         "id": 0,
     }
 
-    response = requests.post(url, json=payload, headers=headers)
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload, headers=headers) as response:
+            if response.status != 200:
+                raise Exception(f"Bitcoin RPC error: {await response.text()}")
 
-    if response.status_code != 200:
-        raise Exception(f"Bitcoin RPC error: {response.text}")
-
-    return response.json()["result"]
+            result = await response.json()
+            return result["result"]

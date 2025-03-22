@@ -5,9 +5,8 @@ import {MempoolTransaction, Transaction, TransactionInfoProps} from "@/types/tra
 export default function TransactionInfo({ transaction, mempoolTransaction }: TransactionInfoProps) {
     return (
         <div className="space-y-6">
-            <TransactionDetails txData={(transaction?.transaction as Transaction)} />
-            <TransactionFlow txData={(mempoolTransaction?.transaction as MempoolTransaction)} />
+            {transaction?.transaction && <TransactionDetails txData={(transaction.transaction as Transaction)} />}
+            {mempoolTransaction?.transaction && <TransactionFlow txData={(mempoolTransaction.transaction as MempoolTransaction)} />}
         </div>
     )
 }
-

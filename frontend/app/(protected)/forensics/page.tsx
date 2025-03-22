@@ -1,9 +1,9 @@
 "use client"
 
-import { useSearchParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import {useSearchParams, useRouter} from "next/navigation"
+import {useEffect, useState} from "react"
+import {Input} from "@/components/ui/input"
+import {Button} from "@/components/ui/button"
 import CoinAge from "@/components/CoinAge"
 import RelatedTransactions from "@/components/RelatedTransactions/RelatedTransactions"
 import BitcoinPrevTxChart from "@/components/BitcoinPrevTxChart/BitcoinPrevTxChart"
@@ -11,7 +11,9 @@ import TransactionInfo from "@/components/TransactionInfo/TransactionInfo"
 import WalletAddressFromTxid from "@/components/WalletAddressFromTxId/WalletAddressFromTxid"
 import Link from "next/link";
 import {useTxInsightFetcher} from "@/hooks/useTxInsightFetcher";
-import { useWalletInsightFetcher } from "@/hooks/useWalletInsightFetcher";
+import {useWalletInsightFetcher} from "@/hooks/useWalletInsightFetcher";
+import {WalletTransactionsDisplay} from "@/components/WalletTransactionsDisplay";
+import WalletInfo from "@/components/WalletInfo/WalletInfo";
 
 
 export default function ForensicsPage() {
@@ -24,13 +26,13 @@ export default function ForensicsPage() {
 
     const {
         coinAgeData,
-            relatedTxData,
-            transaction,
-            mempoolTx,
-            wallet,
-            loading,
-            error,
-            fetchTxInsights,
+        relatedTxData,
+        transaction,
+        mempoolTx,
+        wallet,
+        loading,
+        error,
+        fetchTxInsights,
     } = useTxInsightFetcher(input || "", isTxid);
 
     const {
@@ -59,10 +61,13 @@ export default function ForensicsPage() {
 
 
     const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        router.push(`/forensics?input=${newInput}&isTxid=true`)
+        e.preventDefault();
+        // A simple check: most transaction IDs are 64-character hex strings.
+        const isTxid = /^[0-9a-fA-F]{64}$/.test(newInput);
+        router.push(`/forensics?input=${newInput}&isTxid=${isTxid}`);
     }
 
+    console.log(walletData);
 
     return (
         <div className="p-4 space-y-6 w-full">
@@ -83,7 +88,7 @@ export default function ForensicsPage() {
             {input && isTxid && (
                 <>
                     <div className={"mt-4 flex justify-between items-center"}>
-                        <WalletAddressFromTxid txid={wallet?.txid} scriptpubkey_address={wallet?.scriptpubkey_address} />
+                        <WalletAddressFromTxid txid={wallet?.txid} scriptpubkey_address={wallet?.scriptpubkey_address}/>
 
                         <div className={"space-x-4"}>
                             <Link href={`/investigation?txid=${input}`}>
@@ -93,7 +98,7 @@ export default function ForensicsPage() {
                             </Link>
                         </div>
                     </div>
-                    <TransactionInfo input={input} transaction={transaction} mempoolTransaction={mempoolTx} />
+                    <TransactionInfo input={input} transaction={transaction} mempoolTransaction={mempoolTx}/>
                 </>
             )}
 
@@ -103,9 +108,9 @@ export default function ForensicsPage() {
                         <h2 className="text-xl font-semibold">Coin Age Analysis (from Txid)</h2>
                         {loading && (
                             <div className="space-y-2">
-                                <div className="h-8 bg-muted animate-pulse rounded" />
-                                <div className="h-24 bg-muted animate-pulse rounded" />
-                                <div className="h-8 bg-muted animate-pulse rounded" />
+                                <div className="h-8 bg-muted animate-pulse rounded"/>
+                                <div className="h-24 bg-muted animate-pulse rounded"/>
+                                <div className="h-8 bg-muted animate-pulse rounded"/>
                             </div>
                         )}
                         {error && <p className="text-destructive">{error}</p>}
@@ -115,9 +120,9 @@ export default function ForensicsPage() {
                         <h2 className="text-xl font-semibold">Related Transactions</h2>
                         {loading && (
                             <div className="space-y-2">
-                                <div className="h-8 bg-muted animate-pulse rounded" />
-                                <div className="h-24 bg-muted animate-pulse rounded" />
-                                <div className="h-8 bg-muted animate-pulse rounded" />
+                                <div className="h-8 bg-muted animate-pulse rounded"/>
+                                <div className="h-24 bg-muted animate-pulse rounded"/>
+                                <div className="h-8 bg-muted animate-pulse rounded"/>
                             </div>
                         )}
                         {error && <p className="text-destructive">{error}</p>}
@@ -132,41 +137,15 @@ export default function ForensicsPage() {
             )}
 
             {!isTxid && walletData && walletTransactions && (
-                <div className="space-y-4">
-                    <h2 className="text-xl font-semibold">Wallet Data Analysis</h2>
-                    {walletLoading && (
-                        <div className="space-y-2">
-                            <div className="h-8 bg-muted animate-pulse rounded"/>
-                            <div className="h-24 bg-muted animate-pulse rounded"/>
-                            <div className="h-8 bg-muted animate-pulse rounded"/>
-                        </div>
-                    )}
-                    {walletError && <p className="text-destructive">{walletError}</p>}
-                    {!walletLoading && !walletError && (
-                        <>
-                            <div className="bg-card py-4 px-6 rounded shadow">
-                                <h3 className="text-lg font-medium">Wallet Address</h3>
-                                <p className="text-muted-foreground">{walletData?.wallet}</p>
-                            </div>
-                            <div className="bg-card py-4 px-6 rounded shadow">
-                                <h3 className="text-lg font-medium">Balance</h3>
-                                <p className="text-muted-foreground">{walletData?.balance} BTC</p>
-                            </div>
-                            <div className="bg-card py-4 px-6 rounded shadow">
-                                <h3 className="text-lg font-medium">Number of Transactions received</h3>
-                                <p className="text-muted-foreground">{walletData?.tx_received}</p>
-                            </div>
-                            <div className="bg-card py-4 px-6 rounded shadow">
-                                <h3 className="text-lg font-medium">Number of Transactions sent</h3>
-                                <p className="text-muted-foreground">{walletData?.tx_coins_sum}</p>
-                            </div>
-                        </>
-                    )}
-
-                    <pre>
-                        {JSON.stringify(walletTransactions, null, 2)}
-                    </pre>
-                </div>
+                <>
+                    <div>
+                        <WalletInfo walletData={walletData} walletError={walletError} walletLoading={walletLoading}
+                                    walletTransactions={walletTransactions}/>
+                    </div>
+                    <div>
+                        <WalletTransactionsDisplay data={walletTransactions}/>
+                    </div>
+                </>
             )}
         </div>
     )

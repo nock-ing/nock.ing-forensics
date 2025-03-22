@@ -1,13 +1,13 @@
 'use client'
 
-import { ProtectedRoute } from "@/components/ProtectedRoute"
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import {ProtectedRoute} from "@/components/ProtectedRoute"
+import {SidebarProvider, SidebarTrigger} from "@/components/ui/sidebar"
 import {AppSidebar} from "@/components/SideBar";
-import { usePathname } from 'next/navigation';
+import {usePathname} from 'next/navigation';
 
 export default function ProtectedLayout({
-    children,
-}: {
+                                            children,
+                                        }: {
     children: React.ReactNode
 }) {
 
@@ -29,7 +29,7 @@ export default function ProtectedLayout({
                                 {children}
                             </main>
                         </SidebarProvider>
-                    ): (
+                    ) : (
                         <main>
                             {children}
                         </main>

@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     const token = await getBearerTokenFromHeaders();
 
     const response = await fetch(
-      `${BACKEND_URL}/address/wallet?address=${wallet}`,
+      `${BACKEND_URL}/address/txs/summary?address=${wallet}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,

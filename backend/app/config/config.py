@@ -21,6 +21,10 @@ class Settings(BaseSettings):
 
     WALLET_NAME: str = Field(default=os.getenv("BITCOIN_WALLET_NAME", "default_wallet"))
 
+    # Umbrel
+    UMBREL_HOST: str = Field(default=os.getenv("UMBREL_HOST", "127.0.0.1"))
+    UMBREL_PORT: int = Field(default=int(os.getenv("UMBREL_PORT", 3006)))
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
