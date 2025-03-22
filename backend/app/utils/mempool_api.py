@@ -1,17 +1,20 @@
 from app.config.config import settings
-import requests
+import aiohttp
 
-def mempool_api_call(method: str, params=None):
+
+async def mempool_api_call(method: str, params=None):
     if params is None:
         params = []
 
-    url = f"http://umbrel.remote:3006/{method}"
+    url = f"http://{settings.UMBREL_HOST}:{settings.UMBREL_PORT}/{method}"
     headers = {'content-type': 'application/json'}
 
-    response = requests.get(url, headers=headers)
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as response:
+            if response.status != 200:
+                raise Exception(f"Mempool REST API error: {await response.text()}")
 
-    if response.status_code != 200:
-        raise Exception(f"Mempool REST API error: {response.text}")
+            data = await response.json()
+            print(data)
+            return data
 
-    print(response.json())
-    return response.json()
