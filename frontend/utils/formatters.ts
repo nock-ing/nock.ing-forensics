@@ -22,3 +22,9 @@ export const convertIsoDateToLocaleString = (isoDate: string): string => {
     const safeDate = isoDate.split('.')[0];
     return new Date(safeDate).toLocaleString();
 };
+
+export const formatDate = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleDateString() + ' ' +
+        new Date(timestamp * 1000).toLocaleTimeString();
+};
+

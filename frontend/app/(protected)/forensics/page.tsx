@@ -17,10 +17,10 @@ import WalletInfo from "@/components/WalletInfo/WalletInfo";
 
 
 export default function ForensicsPage() {
-    const searchParams = useSearchParams()
-    const router = useRouter()
-    const input = searchParams.get("input")
-    const isTxid = searchParams.get("isTxid") === "true"
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const input = searchParams.get("input");
+    const isTxid = searchParams.get("isTxid") === "true";
 
     const [newInput, setNewInput] = useState(input || "")
 
@@ -59,7 +59,6 @@ export default function ForensicsPage() {
         }
     }, [fetchTxInsights, fetchWalletInsights, input, isTxid]);
 
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         // A simple check: most transaction IDs are 64-character hex strings.
@@ -67,7 +66,6 @@ export default function ForensicsPage() {
         router.push(`/forensics?input=${newInput}&isTxid=${isTxid}`);
     }
 
-    console.log(walletData);
 
     return (
         <div className="p-4 space-y-6 w-full">
