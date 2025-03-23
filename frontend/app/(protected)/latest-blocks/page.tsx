@@ -1,25 +1,24 @@
 'use client';
 
-import React, { useOptimistic, useState, useTransition, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw } from 'lucide-react';
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Block, BlockList } from "@/components/BlockCard/blockCard.types";
+import React, {useOptimistic, useState, useTransition, useCallback} from "react";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Button} from "@/components/ui/button";
+import {Loader2, RefreshCw} from 'lucide-react';
+import {ScrollArea} from "@/components/ui/scroll-area";
+import {Block, BlockList} from "@/components/BlockCard/blockCard.types";
 import BlockCard from "@/components/BlockCard/BlockCard";
-import { useToast } from "@/hooks/use-toast";
+import {useToast} from "@/hooks/use-toast";
 import {BlockSkeleton} from "@/components/BlockCard/BlockSkeleton";
 
 export default function Page() {
-    const [latestBlocks, setLatestBlocks] = useState<BlockList>({ latest_blocks: [] });
+    const [latestBlocks, setLatestBlocks] = useState<BlockList>({latest_blocks: []});
     const [optimisticBlocks, setOptimisticBlocks] = useOptimistic<BlockList>(latestBlocks);
     const [isPending, startTransition] = useTransition();
-    const { toast } = useToast();
+    const {toast} = useToast();
 
-    const fetchLatestBlocks = async () => {
+    const fetchLatestBlocks = useCallback(async () => {
         startTransition(() => {
-            // Optimistically update with placeholder blocks
-            const placeholderBlocks: Block[] = Array.from({ length: 5 }, (_, index) => ({
+            const placeholderBlocks: Block[] = Array.from({length: 5}, (_, index) => ({
                 height: (optimisticBlocks.latest_blocks[0]?.height || 0) + index + 1,
                 hash: `Loading-${Date.now()}-${index}`,
                 time: Date.now() / 1000,
@@ -34,7 +33,6 @@ export default function Page() {
             const token = localStorage.getItem('token');
             const response = await fetch('/api/latest-blocks', {
                 headers: {
-
                     'Authorization': `Bearer ${token}`
                 }
             });
@@ -59,11 +57,8 @@ export default function Page() {
                 variant: "destructive",
             });
         }
-    };
+    }, [optimisticBlocks, latestBlocks, setLatestBlocks, setOptimisticBlocks, startTransition, toast]);
 
-    useEffect(() => {
-        fetchLatestBlocks();
-    }, [fetchLatestBlocks]);
 
     return (
         <div className="container mx-auto p-4">
@@ -85,19 +80,19 @@ export default function Page() {
                             <div className="space-y-4">
                                 {optimisticBlocks.latest_blocks.map((block: Block) => (
                                     block.hash.startsWith('Loading-') ? (
-                                        <BlockSkeleton key={block.hash} />
+                                        <BlockSkeleton key={block.hash}/>
                                     ) : (
-                                        <BlockCard key={block.hash} block={block} />
+                                        <BlockCard key={block.hash} block={block}/>
                                     )
                                 ))}
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {Array.from({ length: 5 }).map((_, index) => (
-                                    <BlockSkeleton key={index} />
+                                {Array.from({length: 5}).map((_, index) => (
+                                    <BlockSkeleton key={index}/>
                                 ))}
                             </div>
-                        ): <p>
+                        ) : <p>
                             No blocks found. Please check your connection to your node.
                         </p>}
                     </ScrollArea>

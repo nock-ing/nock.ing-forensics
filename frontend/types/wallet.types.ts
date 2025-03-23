@@ -1,5 +1,6 @@
 
 export type WalletData = {
+    timestamp?: string;
     address: number;
     total_received_sats: number;
     total_sent_sats: number;
@@ -39,7 +40,15 @@ type TxOutput = {
     value: number;
 };
 
+type TransactionStatus = {
+    confirmed: boolean;
+    block_height?: number;
+    block_hash?: string;
+    block_time?: number;
+};
+
 type Transaction = {
+    status: TransactionStatus;
     txid: string;
     version: number;
     locktime: number;
