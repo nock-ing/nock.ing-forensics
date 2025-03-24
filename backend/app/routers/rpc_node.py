@@ -93,7 +93,6 @@ async def get_latest_blocks(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/related-tx", response_model=dict)
 async def transaction_forensics(
     txid: str,
@@ -313,10 +312,6 @@ async def get_tx_wallet(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-        import time
-from datetime import datetime
-
-
 @router.get("/coin-age/txid", response_model=dict)
 async def get_coin_age_by_txid(
         hashid: str,
@@ -382,69 +377,6 @@ async def get_coin_age_by_txid(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-@router.get("/coin-age/address", response_model=dict)
-async def get_coin_age_by_address(
-    address: str,
-    current_user: dict = Depends(get_current_active_user),
-    redis_service: RedisService = Depends(get_redis_service),
-):
-    """
-    Get the age of coins for a wallet address.
-    """
-    try:
-
-        cached_coin_age = redis_service.get(address)
-        if cached_coin_age:
-            if isinstance(cached_coin_age, dict):
-                return cached_coin_age
-            return json.loads(cached_coin_age)
-
-        unspent_outputs = await bitcoin_rpc_call("listunspent", [0, 9999999, [address]])
-
-        if not unspent_outputs:
-            raise HTTPException(
-                status_code=404, detail=f"No UTXOs found for address {address}."
-            )
-
-        current_block = await bitcoin_rpc_call("getblockcount")
-        coin_ages = []
-
-        for utxo in unspent_outputs:
-            confirmations = utxo["confirmations"]
-            creation_block = current_block - confirmations
-            age_in_days = (confirmations * 10) / (
-                60 * 24
-            )  # Approx 10 minutes per block
-
-            coin_ages.append(
-                {
-                    "txid": utxo["txid"],
-                    "vout": utxo["vout"],
-                    "amount": utxo["amount"],
-                    "confirmations": confirmations,
-                    "creation_block": creation_block,
-                    "age_in_days": round(age_in_days, 2),
-                }
-            )
-
-        redis_service.set(address, json.dumps({
-            "address": address,
-            "utxos": coin_ages,
-            "current_block": current_block,
-        }))
-
-        return {
-            "address": address,
-            "utxos": coin_ages,
-            "current_block": current_block,
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 @router.get("/address/txs", response_model=dict)
 async def get_address_txs(
