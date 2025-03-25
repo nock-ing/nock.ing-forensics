@@ -25,6 +25,7 @@ services:
       timeout: 10s
       retries: 3
 
+
 networks:
   default:
     driver: bridge

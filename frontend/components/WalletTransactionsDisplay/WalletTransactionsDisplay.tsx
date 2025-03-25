@@ -18,13 +18,14 @@ import {
 import {Badge} from "@/components/ui/badge";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {WalletTxData} from "@/types/wallet.types";
-import {Copy, ExternalLink} from "lucide-react"; // Import the icon components
+import {Copy, ExternalLink} from "lucide-react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import Link from "next/link";
 import {satoshisToBTC} from "@/utils/formatters";
 import {copyToClipboard} from "@/utils/copyToClipboard";
 import {getWalletAmount} from "@/utils/transactionValueFetcher";
 import {useHistoricalPrices} from "@/hooks/useHistoricalPrices";
+import {useCoinAge} from "@/hooks/useCoinAge";
 
 
 interface WalletTransactionsDisplayProps {
@@ -34,6 +35,9 @@ interface WalletTransactionsDisplayProps {
 export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps) {
     const [selectedTxTimestamp, setSelectedTxTimestamp] = React.useState<string | undefined>(undefined);
     const {priceData} = useHistoricalPrices(selectedTxTimestamp);
+    const {coinAgeData, isLoading: coinAgeLoading} = useCoinAge(data?.address);
+
+    console.log(coinAgeData)
 
     const handleSelectTransaction = (timestamp: string | undefined) => {
         setSelectedTxTimestamp(timestamp);
@@ -44,7 +48,6 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
             <Card>
                 <CardHeader>
                     <CardTitle>Wallet Transactions</CardTitle>
-                    <CardDescription>No transactions found for this wallet</CardDescription>
                 </CardHeader>
             </Card>
         );
@@ -73,11 +76,15 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                                 <TableHead className="text-right">Size</TableHead>
                                 <TableHead className="text-right">BTC Amount</TableHead>
                                 <TableHead className="text-right">BTC Price</TableHead>
+                                <TableHead>Coin Age</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {data.transactions.map((tx) => {
                                 const txTimestamp = tx.status?.block_time?.toString();
+                                const coinAgeDetail = coinAgeData?.coin_age_details?.find(
+                                    (detail) => detail.txid === tx.txid
+                                );
 
                                 return (
                                     <TableRow key={tx.txid} onClick={() => handleSelectTransaction(txTimestamp)}>
@@ -164,6 +171,28 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                                                 "Select for price"
                                             )}
                                         </TableCell>
+                                        <TableCell>
+                                            {coinAgeLoading ? (
+                                                <span className="text-muted-foreground">Loading...</span>
+                                            ) : coinAgeDetail ? (
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span
+                                                            className="font-medium">{coinAgeDetail.days_difference.toFixed(2)} days</span>
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {coinAgeDetail.blocks_difference} blocks
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Amount: {coinAgeDetail.amount.toFixed(8)} BTC
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground">No data</span>
+                                            )}
+
+                                        </TableCell>
+
                                     </TableRow>
                                 )
                             })}
