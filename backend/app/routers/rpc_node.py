@@ -312,6 +312,113 @@ async def get_tx_wallet(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.get("/coin-age/address", response_model=dict)
+async def get_coin_age_by_address(
+        address: str,
+        current_user: dict = Depends(get_current_active_user),
+        redis_service: RedisService = Depends(get_redis_service),
+):
+    """
+    Get the coin age for all transactions associated with an address,
+    calculating the difference in block heights between when UTXOs were
+    received and when they were spent.
+    """
+    try:
+        # Check cache
+        cache_key = f"coin_age_{address}"
+        cached_result = redis_service.get(cache_key)
+        if cached_result:
+            if isinstance(cached_result, dict):
+                return cached_result
+            return json.loads(cached_result)
+
+        # Fetch all transactions for this address using mempool API
+        txs = await mempool_api_call(f"api/address/{address}/txs")
+
+        if not txs:
+            raise HTTPException(
+                status_code=404, detail=f"No transactions found for address {address}"
+            )
+
+        # Track all UTXOs and their spending
+        results = []
+        utxo_map = {}  # Maps txid:vout to block_height for received outputs
+
+        # First pass: collect all outputs received by this address
+        for tx in txs:
+            if "status" not in tx or "block_height" not in tx["status"]:
+                continue  # Skip unconfirmed transactions
+
+            tx_id = tx["txid"]
+            block_height = tx["status"]["block_height"]
+
+            # Track outputs belonging to this address
+            for vout_idx, vout in enumerate(tx.get("vout", [])):
+                if "scriptpubkey_address" in vout and vout["scriptpubkey_address"] == address:
+                    utxo_key = f"{tx_id}:{vout_idx}"
+                    utxo_map[utxo_key] = {
+                        "block_height": block_height,
+                        "value": vout["value"],
+                        "txid": tx_id,
+                        "vout": vout_idx
+                    }
+
+        # Second pass: find spending transactions and calculate coin age
+        for tx in txs:
+            if "status" not in tx or "block_height" not in tx["status"]:
+                continue  # Skip unconfirmed transactions
+
+            spent_block_height = tx["status"]["block_height"]
+
+            # Find inputs spending from this address
+            for vin in tx.get("vin", []):
+                if "txid" in vin and "vout" in vin:
+                    utxo_key = f"{vin['txid']}:{vin['vout']}"
+
+                    if utxo_key in utxo_map:
+                        # This input is spending a UTXO belonging to our address
+                        utxo_info = utxo_map[utxo_key]
+                        received_block_height = utxo_info["block_height"]
+
+                        # Calculate the difference in block heights (coin age)
+                        blocks_diff = spent_block_height - received_block_height
+                        days_diff = (blocks_diff * 10) / (60 * 24)  # Assuming 10-minute blocks
+
+                        results.append({
+                            "txid": tx["txid"],  # Spending transaction
+                            "prev_txid": utxo_info["txid"],  # Original transaction
+                            "received_block": received_block_height,
+                            "spent_block": spent_block_height,
+                            "blocks_difference": blocks_diff,
+                            "days_difference": round(days_diff, 2),
+                            "amount": utxo_info["value"] / 100000000  # Convert from satoshis to BTC
+                        })
+
+        # Cache and return the response
+        response = {
+            "address": address,
+            "transactions_count": len(results),
+            "coin_age_details": results
+        }
+
+        redis_service.set(cache_key, json.dumps(response))
+
+        # Record address lookup in recent queries
+        redis_service.lpush_trim("address_coin_age", json.dumps({
+            "address": address,
+            "added": datetime.now().isoformat()
+        }))
+
+        return response
+
+    except Exception as e:
+        # Log the actual exception for debugging
+        print(f"Error in get_coin_age_by_address: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @router.get("/coin-age/txid", response_model=dict)
 async def get_coin_age_by_txid(
         hashid: str,
@@ -377,6 +484,7 @@ async def get_coin_age_by_txid(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/address/txs", response_model=dict)
 async def get_address_txs(

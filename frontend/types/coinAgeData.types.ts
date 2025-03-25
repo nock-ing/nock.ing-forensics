@@ -7,3 +7,19 @@ export interface CoinAgeData {
     age_in_days: number;
 }
 
+
+type CoinAgeDetails = {
+    txid: string;
+    prev_txid: string;
+    received_block: number;
+    spent_block: number;
+    blocks_difference: number;
+    days_difference: number;
+    amount: number;
+}
+
+export type CoinAgeResponse = {
+    address: string;
+    transactions_count: number;
+    coin_age_details: CoinAgeDetails[];
+}
