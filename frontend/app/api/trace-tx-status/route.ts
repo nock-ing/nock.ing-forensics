@@ -3,10 +3,8 @@ import { NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 
-export async function GET(req: Request) {
+export async function GET() {
     try {
-        const url = new URL(req.url);
-        const txid = url.searchParams.get('txid');
         const token = await getBearerTokenFromHeaders();
 
         const response = await fetch(
