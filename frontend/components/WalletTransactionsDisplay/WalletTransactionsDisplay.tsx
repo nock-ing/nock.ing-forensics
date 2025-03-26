@@ -26,6 +26,8 @@ import {copyToClipboard} from "@/utils/copyToClipboard";
 import {getWalletAmount} from "@/utils/transactionValueFetcher";
 import {useHistoricalPrices} from "@/hooks/useHistoricalPrices";
 import {useCoinAge} from "@/hooks/useCoinAge";
+import PriceBasedGainCalculator from "@/components/PriceBasedGainCalculator/PriceBasedGainCalculator";
+import {useCurrentPrice} from "@/hooks/useCurrentPrice";
 
 
 interface WalletTransactionsDisplayProps {
@@ -33,11 +35,25 @@ interface WalletTransactionsDisplayProps {
 }
 
 export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps) {
-    const [selectedTxTimestamp, setSelectedTxTimestamp] = React.useState<string | undefined>(undefined);
+    const [selectedTxTimestamp, setSelectedTxTimestamp] = React.useState<string | undefined>(
+        data?.transactions[0]?.status?.block_time?.toString()
+    );
     const {priceData} = useHistoricalPrices(selectedTxTimestamp);
     const {coinAgeData, isLoading: coinAgeLoading} = useCoinAge(data?.address);
+    const currentPrice = useCurrentPrice();
+    const blockToTimestampMap = React.useMemo(() => {
+        const map: Record<number, number> = {};
 
-    console.log(coinAgeData)
+        // Populate map from transaction data
+        data.transactions.forEach(tx => {
+            if (tx.status?.block_height && tx.status?.block_time) {
+                map[tx.status.block_height] = tx.status.block_time;
+            }
+        });
+
+        return map;
+    }, [data]);
+
 
     const handleSelectTransaction = (timestamp: string | undefined) => {
         setSelectedTxTimestamp(timestamp);
@@ -76,7 +92,7 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                                 <TableHead className="text-right">Size</TableHead>
                                 <TableHead className="text-right">BTC Amount</TableHead>
                                 <TableHead className="text-right">BTC Price</TableHead>
-                                <TableHead>Coin Age</TableHead>
+                                <TableHead>Held for/Gains</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -185,12 +201,21 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                                                     </div>
                                                     <div className="text-xs text-muted-foreground">
                                                         Amount: {coinAgeDetail.amount.toFixed(8)} BTC
+                                                        {coinAgeDetail.spent_block && (
+                                                            <PriceBasedGainCalculator
+                                                                coinAgeDetail={coinAgeDetail}
+                                                                blockToTimestampMap={blockToTimestampMap}
+                                                                // Pass current price for unrealized gains calculation
+                                                                currentPrice={currentPrice?.priceData?.EUR}
+                                                                isRealized={!!coinAgeDetail.spent_block}
+                                                            />
+
+                                                        )}
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <span className="text-muted-foreground">No data</span>
                                             )}
-
                                         </TableCell>
 
                                     </TableRow>

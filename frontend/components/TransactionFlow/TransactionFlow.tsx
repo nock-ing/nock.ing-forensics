@@ -6,7 +6,6 @@ import {MempoolTransaction} from "@/types/transactions.types";
 import Link from "next/link";
 
 export function TransactionFlow({txData}: { txData: MempoolTransaction }) {
-    console.log(txData);
     return (
         <Card>
             <CardHeader>
