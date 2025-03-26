@@ -12,7 +12,6 @@ export function useWalletInsightFetcher(input: string, isTxid: boolean) {
         async (type: 'wallet' | 'wallettx') => {
             if (!input) return;
 
-            console.log("wallet address:" + input);
             // Only proceed if isTxid is false (meaning it's a wallet address)
             if (isTxid) return;
 
