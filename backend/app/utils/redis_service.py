@@ -1,6 +1,7 @@
 from app.utils.redis import get_redis
 import json
 
+
 class RedisService:
     def __init__(self, redis_client):
         self.redis = redis_client
@@ -15,18 +16,18 @@ class RedisService:
         return None
 
     def set(self, key, value, expiry=None):
-        if expiry != None:
+        if expiry is not None:
             self.redis.setex(key, expiry, value)
         else:
             self.redis.set(key, value)
-    
+
     def delete(self, key):
         self.redis.delete(key)
-    
+
     def lpush_trim(self, key, value, limit=10):
         self.redis.lpush(key, value)
         self.redis.ltrim(key, 0, limit - 1)
-    
+
     def lrange(self, key, start, end):
         return self.redis.lrange(key, start, end)
 
@@ -44,6 +45,7 @@ class RedisService:
 
     def empty_redis(self):
         self.redis.flushdb()
+
 
 def get_redis_service():
     redis = get_redis()

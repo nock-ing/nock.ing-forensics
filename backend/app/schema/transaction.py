@@ -2,6 +2,7 @@ from typing import Optional
 
 from sqlmodel import SQLModel
 
+
 class Transaction(SQLModel):
     id: Optional[int] = None
     transaction_hash: str

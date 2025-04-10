@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 
 from app.celery_worker import celery_app
-from app.utils.redis_service import RedisService, get_redis_service
+from app.utils.redis_service import get_redis_service
 from app.utils.bitcoin_rpc import bitcoin_rpc_call
 import asyncio
 
@@ -12,9 +12,9 @@ redis_service = get_redis_service()
 
 @celery_app.task(name="trace_transaction_origin")
 def perform_transaction_origin_trace(
-        txid: str,
-        include_tx_details: bool,
-        task_id: str,
+    txid: str,
+    include_tx_details: bool,
+    task_id: str,
 ):
     """Background task to trace a transaction back to its origin."""
     try:
@@ -46,20 +46,28 @@ def perform_transaction_origin_trace(
             # Update progress every 10 transactions
             if processed_count % 10 == 0:
                 # Calculate an approximate progress (max 90%)
-                progress = min(90, int(5 + (processed_count / (processed_count + len(queue))) * 85))
-                update_task_status(redis_service, task_id, "processing", progress=progress)
+                progress = min(
+                    90, int(5 + (processed_count / (processed_count + len(queue))) * 85)
+                )
+                update_task_status(
+                    redis_service, task_id, "processing", progress=progress
+                )
 
             # Get transaction details
             try:
-                tx = asyncio.run(bitcoin_rpc_call("getrawtransaction", [current_txid, True]))
+                tx = asyncio.run(
+                    bitcoin_rpc_call("getrawtransaction", [current_txid, True])
+                )
             except Exception as e:
                 # Handle case where transaction can't be retrieved
-                trace_path.append({
-                    "txid": current_txid,
-                    "depth": depth,
-                    "error": str(e),
-                    "is_coinbase": False
-                })
+                trace_path.append(
+                    {
+                        "txid": current_txid,
+                        "depth": depth,
+                        "error": str(e),
+                        "is_coinbase": False,
+                    }
+                )
                 continue
 
             # Create the trace entry
@@ -68,7 +76,7 @@ def perform_transaction_origin_trace(
                 "depth": depth,
                 "time": tx.get("time"),
                 "blockheight": tx.get("height"),
-                "is_coinbase": False
+                "is_coinbase": False,
             }
 
             if include_tx_details:
@@ -95,7 +103,7 @@ def perform_transaction_origin_trace(
             "trace_count": len(trace_path),
             "origin_count": len(origins),
             "trace_path": trace_path,
-            "origin_transactions": origins
+            "origin_transactions": origins,
         }
 
         # Cache the result
@@ -104,11 +112,7 @@ def perform_transaction_origin_trace(
 
         # Update task status to completed
         update_task_status(
-            redis_service,
-            task_id,
-            "completed",
-            progress=100,
-            result_key=cache_key
+            redis_service, task_id, "completed", progress=100, result_key=cache_key
         )
 
         # Remove the in-progress flag
@@ -116,17 +120,14 @@ def perform_transaction_origin_trace(
 
     except Exception as e:
         # Update task status to error
-        update_task_status(
-            redis_service,
-            task_id,
-            "error",
-            error=str(e)
-        )
+        update_task_status(redis_service, task_id, "error", error=str(e))
         # Remove the in-progress flag
         redis_service.delete(f"tx-origin-trace-in-progress:{txid}")
 
 
-def update_task_status(redis_service, task_id, status, progress=None, error=None, result_key=None):
+def update_task_status(
+    redis_service, task_id, status, progress=None, error=None, result_key=None
+):
     """Update the status of a background task."""
     task_key = f"task:{task_id}"
     task_data = redis_service.get(task_key)

@@ -9,6 +9,7 @@ from app.utils.redis_service import RedisService, get_redis_service
 from app.utils.bitcoin_rpc import bitcoin_rpc_call
 from app.utils.format import sats_to_btc
 from app.utils.mempool_api import mempool_api_call
+
 router = APIRouter()
 
 
@@ -30,9 +31,7 @@ async def get_node_info(
         if not blockchain_info:
             raise HTTPException(status_code=404, detail="Blockchain info not found.")
 
-        redis_service.set("node_info", json.dumps({
-            "blockchain_info": blockchain_info
-        }))
+        redis_service.set("node_info", json.dumps({"blockchain_info": blockchain_info}))
 
         return {"blockchain_info": blockchain_info}
     except Exception as e:
@@ -51,11 +50,11 @@ async def get_latest_blocks(
     try:
         # if count changes, we need to update the cache
         cached_latest_blocks = redis_service.get("latest_blocks")
-        if (cached_latest_blocks):
-            if (isinstance(cached_latest_blocks, dict)):
+        if cached_latest_blocks:
+            if isinstance(cached_latest_blocks, dict):
                 return cached_latest_blocks
             cached_latest_blocks = json.loads(cached_latest_blocks)
-            if (len(cached_latest_blocks["latest_blocks"]) != count):
+            if len(cached_latest_blocks["latest_blocks"]) != count:
                 redis_service.delete("latest_blocks")
             else:
                 return cached_latest_blocks
@@ -92,6 +91,7 @@ async def get_latest_blocks(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/related-tx", response_model=dict)
 async def transaction_forensics(
@@ -163,25 +163,30 @@ async def transaction_forensics(
 
         # Cache the result for reactflow
         # we need id, label, position (can be 0,0)
-        related_txids = [tx["txid"] for tx in related_transactions]
-        redis_service.set(flow_cache_key, json.dumps({
-            "id": txid,
-            "data": {"label": txid},
-            "position": {"x": 0, "y": 0},
-            "related_txids": {
-                tx["txid"]: {
-                    "id": tx["txid"],
-                    "data": {"label": tx["txid"]},
+        #related_txids = [tx["txid"] for tx in related_transactions]
+        redis_service.set(
+            flow_cache_key,
+            json.dumps(
+                {
+                    "id": txid,
+                    "data": {"label": txid},
                     "position": {"x": 0, "y": 0},
+                    "related_txids": {
+                        tx["txid"]: {
+                            "id": tx["txid"],
+                            "data": {"label": tx["txid"]},
+                            "position": {"x": 0, "y": 0},
+                        }
+                        for tx in related_transactions
+                    },
                 }
-                for tx in related_transactions
+            ),
+        )
 
-            }
-        }))
-
-        redis_service.set(cache_key, json.dumps({
-            "related_transactions": related_transactions[:depth]
-        }))
+        redis_service.set(
+            cache_key,
+            json.dumps({"related_transactions": related_transactions[:depth]}),
+        )
 
         return {"related_transactions": related_transactions[:depth]}
 
@@ -214,14 +219,13 @@ async def get_tx_info(
                 status_code=404, detail=f"Transaction {txid} not found."
             )
 
-        redis_service.set(cache_key, json.dumps({
-            "transaction": raw_tx
-        }))
+        redis_service.set(cache_key, json.dumps({"transaction": raw_tx}))
 
         return {"transaction": raw_tx}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/mempool/tx/info", response_model=dict)
 async def get_tx_info_mempool(
@@ -247,14 +251,18 @@ async def get_tx_info_mempool(
                 status_code=404, detail=f"Transaction {txid} not found."
             )
 
-        redis_service.lpush_trim("txid", json.dumps({
-            "txid": txid,
-            "added": datetime.now().isoformat()
-        }))
-        redis_service.set(cache_key, json.dumps({
-            "txid": txid,
-            "transaction": tx_info,
-        }))
+        redis_service.lpush_trim(
+            "txid", json.dumps({"txid": txid, "added": datetime.now().isoformat()})
+        )
+        redis_service.set(
+            cache_key,
+            json.dumps(
+                {
+                    "txid": txid,
+                    "transaction": tx_info,
+                }
+            ),
+        )
 
         return {
             "txid": txid,
@@ -296,14 +304,21 @@ async def get_tx_wallet(
                 status_code=404, detail=f"Transaction {txid} not found."
             )
 
-        redis_service.set(cache_key, json.dumps({
-            "txid": txid,
-            "scriptpubkey_address": scriptpubkey_address,
-        }))
-        redis_service.lpush_trim("wallet", json.dumps({
-            "wallet": scriptpubkey_address,
-            "added": datetime.now().isoformat()
-        }))
+        redis_service.set(
+            cache_key,
+            json.dumps(
+                {
+                    "txid": txid,
+                    "scriptpubkey_address": scriptpubkey_address,
+                }
+            ),
+        )
+        redis_service.lpush_trim(
+            "wallet",
+            json.dumps(
+                {"wallet": scriptpubkey_address, "added": datetime.now().isoformat()}
+            ),
+        )
 
         return {
             "txid": txid,
@@ -315,9 +330,9 @@ async def get_tx_wallet(
 
 @router.get("/coin-age/address", response_model=dict)
 async def get_coin_age_by_address(
-        address: str,
-        current_user: dict = Depends(get_current_active_user),
-        redis_service: RedisService = Depends(get_redis_service),
+    address: str,
+    current_user: dict = Depends(get_current_active_user),
+    redis_service: RedisService = Depends(get_redis_service),
 ):
     """
     Get the coin age for all transactions associated with an address,
@@ -355,13 +370,16 @@ async def get_coin_age_by_address(
 
             # Track outputs belonging to this address
             for vout_idx, vout in enumerate(tx.get("vout", [])):
-                if "scriptpubkey_address" in vout and vout["scriptpubkey_address"] == address:
+                if (
+                    "scriptpubkey_address" in vout
+                    and vout["scriptpubkey_address"] == address
+                ):
                     utxo_key = f"{tx_id}:{vout_idx}"
                     utxo_map[utxo_key] = {
                         "block_height": block_height,
                         "value": vout["value"],
                         "txid": tx_id,
-                        "vout": vout_idx
+                        "vout": vout_idx,
                     }
 
         # Second pass: find spending transactions and calculate coin age
@@ -383,32 +401,37 @@ async def get_coin_age_by_address(
 
                         # Calculate the difference in block heights (coin age)
                         blocks_diff = spent_block_height - received_block_height
-                        days_diff = (blocks_diff * 10) / (60 * 24)  # Assuming 10-minute blocks
+                        days_diff = (blocks_diff * 10) / (
+                            60 * 24
+                        )  # Assuming 10-minute blocks
 
-                        results.append({
-                            "txid": tx["txid"],  # Spending transaction
-                            "prev_txid": utxo_info["txid"],  # Original transaction
-                            "received_block": received_block_height,
-                            "spent_block": spent_block_height,
-                            "blocks_difference": blocks_diff,
-                            "days_difference": round(days_diff, 2),
-                            "amount": utxo_info["value"] / 100000000  # Convert from satoshis to BTC
-                        })
+                        results.append(
+                            {
+                                "txid": tx["txid"],  # Spending transaction
+                                "prev_txid": utxo_info["txid"],  # Original transaction
+                                "received_block": received_block_height,
+                                "spent_block": spent_block_height,
+                                "blocks_difference": blocks_diff,
+                                "days_difference": round(days_diff, 2),
+                                "amount": utxo_info["value"]
+                                / 100000000,  # Convert from satoshis to BTC
+                            }
+                        )
 
         # Cache and return the response
         response = {
             "address": address,
             "transactions_count": len(results),
-            "coin_age_details": results
+            "coin_age_details": results,
         }
 
         redis_service.set(cache_key, json.dumps(response))
 
         # Record address lookup in recent queries
-        redis_service.lpush_trim("address_coin_age", json.dumps({
-            "address": address,
-            "added": datetime.now().isoformat()
-        }))
+        redis_service.lpush_trim(
+            "address_coin_age",
+            json.dumps({"address": address, "added": datetime.now().isoformat()}),
+        )
 
         return response
 
@@ -418,12 +441,11 @@ async def get_coin_age_by_address(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
 @router.get("/coin-age/txid", response_model=dict)
 async def get_coin_age_by_txid(
-        hashid: str,
-        current_user: dict = Depends(get_current_active_user),
-        redis_service: RedisService = Depends(get_redis_service),
+    hashid: str,
+    current_user: dict = Depends(get_current_active_user),
+    redis_service: RedisService = Depends(get_redis_service),
 ):
     """
     Get the age of coins from a transaction ID.
@@ -457,20 +479,24 @@ async def get_coin_age_by_txid(
         age_in_blocks = current_block - coin_creation_block
         age_in_days = (age_in_blocks * 10) / (60 * 24)
 
-        redis_service.set(hashid, json.dumps({
-            "hashid": hashid,
-            "coin_creation_block": coin_creation_block,
-            "current_block": current_block,
-            "age_in_blocks": age_in_blocks,
-            "age_in_days": round(age_in_days, 2),
-            "block_time": block_time,
-            "price": price,
-        }))
+        redis_service.set(
+            hashid,
+            json.dumps(
+                {
+                    "hashid": hashid,
+                    "coin_creation_block": coin_creation_block,
+                    "current_block": current_block,
+                    "age_in_blocks": age_in_blocks,
+                    "age_in_days": round(age_in_days, 2),
+                    "block_time": block_time,
+                    "price": price,
+                }
+            ),
+        )
 
-        redis_service.lpush_trim("txid", json.dumps({
-            "txid": hashid,
-            "added": datetime.now().isoformat()
-        }))
+        redis_service.lpush_trim(
+            "txid", json.dumps({"txid": hashid, "added": datetime.now().isoformat()})
+        )
 
         return {
             "hashid": hashid,
@@ -506,19 +532,22 @@ async def get_address_txs(
         address_txs = await mempool_api_call(f"api/address/{address}/txs")
 
         if not address_txs:
-            raise HTTPException(
-                status_code=404, detail=f"Address {address} not found."
-            )
+            raise HTTPException(status_code=404, detail=f"Address {address} not found.")
 
-        redis_service.lpush_trim("wallet", json.dumps({
-            "wallet": address,
-            "added": datetime.now().isoformat()
-        }))
+        redis_service.lpush_trim(
+            "wallet",
+            json.dumps({"wallet": address, "added": datetime.now().isoformat()}),
+        )
 
-        redis_service.set(cache_key, json.dumps({
-            "address": address,
-            "transactions": address_txs,
-        }))
+        redis_service.set(
+            cache_key,
+            json.dumps(
+                {
+                    "address": address,
+                    "transactions": address_txs,
+                }
+            ),
+        )
 
         return {
             "address": address,
@@ -528,11 +557,12 @@ async def get_address_txs(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("/address/txs/summary", response_model=dict)
 async def get_address_txs_summary(
-        address: str,
-        current_user: dict = Depends(get_current_active_user),
-        redis_service: RedisService = Depends(get_redis_service),
+    address: str,
+    current_user: dict = Depends(get_current_active_user),
+    redis_service: RedisService = Depends(get_redis_service),
 ):
     """
     Fetch all transactions related to a given address and calculate accurate totals.
@@ -549,9 +579,7 @@ async def get_address_txs_summary(
         address_txs = await mempool_api_call(f"api/address/{address}/txs")
 
         if not address_txs:
-            raise HTTPException(
-                status_code=404, detail=f"Address {address} not found."
-            )
+            raise HTTPException(status_code=404, detail=f"Address {address} not found.")
 
         # Calculate accurate totals
         total_received = 0
@@ -575,7 +603,7 @@ async def get_address_txs_summary(
                 "txid": txid,
                 "block_time": tx["status"].get("block_time", 0),
                 "received": 0,
-                "sent": 0
+                "sent": 0,
             }
 
             # Check inputs (sending)
@@ -612,7 +640,7 @@ async def get_address_txs_summary(
             "balance_sats": total_received - total_sent,
             "balance_btc": (total_received - total_sent) / 100000000,
             "tx_count": len(transactions),
-            "transactions": transactions[:5]
+            "transactions": transactions[:5],
         }
 
         redis_service.set(cache_key, json.dumps(result))
@@ -628,48 +656,51 @@ async def get_basic_wallet_info(
     address: str,
     current_user: dict = Depends(get_current_active_user),
     redis_service: RedisService = Depends(get_redis_service),
-    ):
-        cache_key = f"wallet_info:{address}"
-        try:
-            cached_wallet_info = redis_service.get(cache_key)
-            if cached_wallet_info:
-                if isinstance(cached_wallet_info, dict):
-                    return cached_wallet_info
-                json.loads(cached_wallet_info)
+):
+    cache_key = f"wallet_info:{address}"
+    try:
+        cached_wallet_info = redis_service.get(cache_key)
+        if cached_wallet_info:
+            if isinstance(cached_wallet_info, dict):
+                return cached_wallet_info
+            json.loads(cached_wallet_info)
 
+        wallet_info = await mempool_api_call(f"api/address/{address}")
+        if not wallet_info:
+            raise HTTPException(status_code=404, detail=f"Address {address} not found.")
 
-            wallet_info = await mempool_api_call(f"api/address/{address}")
-            if not wallet_info:
-                raise HTTPException(
-                    status_code=404, detail=f"Address {address} not found."
-                )
+        chain_stats = wallet_info.get("chain_stats", {})
 
+        # Calculate current balance
+        current_balance_sats = int(str(chain_stats.get("funded_txo_sum"))) - int(
+            str(chain_stats.get("spent_txo_sum"))
+        )
+        current_balance = await sats_to_btc(current_balance_sats)
 
-            chain_stats = wallet_info.get("chain_stats", {})
+        redis_service.set(
+            cache_key,
+            json.dumps(
+                {
+                    "address": address,
+                    "tx_received": chain_stats.get("funded_txo_count"),
+                    "tx_value_received": chain_stats.get("funded_txo_sum"),
+                    "tx_coins_spent": chain_stats.get("spent_txo_count"),
+                    "tx_coins_sum": chain_stats.get("spent_txo_sum"),
+                    "balance_sats": current_balance_sats,
+                    "balance": current_balance,
+                }
+            ),
+        )
 
-            # Calculate current balance
-            current_balance_sats = int(str(chain_stats.get("funded_txo_sum"))) - int(str(chain_stats.get("spent_txo_sum")))
-            current_balance = await sats_to_btc(current_balance_sats)
+        return {
+            "address": address,
+            "tx_received": chain_stats.get("funded_txo_count"),
+            "tx_value_received": chain_stats.get("funded_txo_sum"),
+            "tx_coins_spent": chain_stats.get("spent_txo_count"),
+            "tx_coins_sum": chain_stats.get("spent_txo_sum"),
+            "balance_sats": current_balance_sats,
+            "balance": current_balance,
+        }
 
-            redis_service.set(cache_key, json.dumps({
-                "address": address,
-                "tx_received": chain_stats.get("funded_txo_count"),
-                "tx_value_received": chain_stats.get("funded_txo_sum"),
-                "tx_coins_spent": chain_stats.get("spent_txo_count"),
-                "tx_coins_sum": chain_stats.get("spent_txo_sum"),
-                "balance_sats": current_balance_sats,
-                "balance": current_balance
-            }))
-
-            return {
-                "address": address,
-                "tx_received": chain_stats.get("funded_txo_count"),
-                "tx_value_received": chain_stats.get("funded_txo_sum"),
-                "tx_coins_spent": chain_stats.get("spent_txo_count"),
-                "tx_coins_sum": chain_stats.get("spent_txo_sum"),
-                "balance_sats": current_balance_sats,
-                "balance": current_balance
-            }
-
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

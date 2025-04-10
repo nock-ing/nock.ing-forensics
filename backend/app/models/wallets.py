@@ -2,9 +2,12 @@ from datetime import datetime
 from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional, TYPE_CHECKING
 
+from app.models import Transactions
+
 if TYPE_CHECKING:
     from app.models.investigations import Investigations
     from app.models.users import Users
+
 
 class Wallets(SQLModel, table=True):
     id: int = Field(primary_key=True)

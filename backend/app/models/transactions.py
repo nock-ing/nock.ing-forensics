@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from app.models.wallets import Wallets
     from app.models.investigations import Investigations
 
+
 class Transactions(SQLModel, table=True):
     id: int = Field(primary_key=True)
     wallet_id: int = Field(foreign_key="wallets.id")

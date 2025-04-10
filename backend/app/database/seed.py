@@ -30,21 +30,19 @@ async def seed_users(session: AsyncSession):
         await session.commit()
         print("Database seeded with default data")
 
+
 async def seed_blocks(session: AsyncSession):
     result = await session.execute(select(Blocks).limit(1))
     existing_blocks = result.scalars().first()
 
     if not existing_blocks:
         default_block = Blocks(
-            id=1,
-            block_hash="0x1234567890",
-            timestamp=1630444800,
-            height=1,
-            size=100
+            id=1, block_hash="0x1234567890", timestamp=1630444800, height=1, size=100
         )
         session.add(default_block)
         await session.commit()
         print("Block Seed Successful")
+
 
 async def seed_wallets(session: AsyncSession):
     result = await session.execute(select(Wallets).limit(1))
@@ -58,11 +56,12 @@ async def seed_wallets(session: AsyncSession):
             wallet_address="0x1234567890",
             wallet_type="taproot",
             created_at=datetime.timestamp(datetime.now()),
-            balance=100
+            balance=100,
         )
         session.add(default_wallet)
         await session.commit()
         print("Wallet Seed Successful")
+
 
 async def seed_tx(session: AsyncSession):
     result = await session.execute(select(Transactions).limit(1))
@@ -79,11 +78,12 @@ async def seed_tx(session: AsyncSession):
             total_input=100,
             total_output=99,
             fee=1,
-            suspicious_illegal_activity=False
+            suspicious_illegal_activity=False,
         )
         session.add(default_tx)
         await session.commit()
         print("Tx Seed Successful")
+
 
 async def seed_investigations(session: AsyncSession):
     result = await session.execute(select(Investigations).limit(1))
@@ -91,11 +91,7 @@ async def seed_investigations(session: AsyncSession):
 
     if not existing_investigations:
         default_investigation = Investigations(
-            id=0,
-            user_id=1,
-            wallet_id=1,
-            transaction_id=1,
-            status=1
+            id=0, user_id=1, wallet_id=1, transaction_id=1, status=1
         )
         session.add(default_investigation)
         await session.commit()
