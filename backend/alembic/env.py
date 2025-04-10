@@ -10,11 +10,6 @@ import os
 
 from alembic import context
 
-from app.models.users import Users
-from app.models.wallets import Wallets
-from app.models.transactions import Transactions
-from app.models.investigations import Investigations
-from app.models.blocks import Blocks
 
 load_dotenv()
 # this is the Alembic Config object, which provides

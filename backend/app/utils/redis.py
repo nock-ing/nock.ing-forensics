@@ -1,7 +1,7 @@
 import redis
 
 # Initialize Redis Connection
-pool = redis.ConnectionPool(host='localhost', port=16379, db=0)
+pool = redis.ConnectionPool(host="localhost", port=16379, db=0)
 r = redis.Redis(connection_pool=pool)
 
 try:

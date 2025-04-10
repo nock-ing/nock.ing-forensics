@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from app.models.wallets import Wallets
     from app.models.investigations import Investigations
 
+
 class Users(SQLModel, table=True):
     id: int = Field(primary_key=True)
     username: str = Field(unique=True, index=True)

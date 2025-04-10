@@ -9,9 +9,9 @@ from app.utils.user_utils import get_user_by_username
 
 
 async def get_current_user(
-        token: str = Depends(verify_access_token),
-        db: AsyncSession = Depends(get_db),
-        redis_service: RedisService = Depends(get_redis_service)
+    token: str = Depends(verify_access_token),
+    db: AsyncSession = Depends(get_db),
+    redis_service: RedisService = Depends(get_redis_service),
 ) -> UserBase:
     if not token:
         raise HTTPException(
@@ -27,7 +27,9 @@ async def get_current_user(
     # validate jti against redis denylist
     jti = token.get("jti")
     if redis_service.get(f"denylist:{jti}"):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token has been revoked"
+        )
 
     user = await get_user_by_username(db, username)
     if user is None:
@@ -40,6 +42,6 @@ async def get_current_user(
 
 
 async def get_current_active_user(
-        current_user: UserBase = Depends(get_current_user)
+    current_user: UserBase = Depends(get_current_user),
 ) -> UserBase:
     return current_user

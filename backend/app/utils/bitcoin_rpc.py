@@ -8,7 +8,7 @@ async def bitcoin_rpc_call(method: str, params=None):
 
     wallet_path = f"/wallet/{settings.WALLET_NAME}" if settings.WALLET_NAME else ""
     url = f"http://{settings.RPC_USER}:{settings.RPC_PASSWORD}@{settings.RPC_HOST}:{settings.RPC_PORT}{wallet_path}"
-    headers = {'content-type': 'application/json'}
+    headers = {"content-type": "application/json"}
     payload = {
         "method": method,
         "params": params,

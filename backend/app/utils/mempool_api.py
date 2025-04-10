@@ -7,7 +7,7 @@ async def mempool_api_call(method: str, params=None):
         params = []
 
     url = f"http://{settings.UMBREL_HOST}:{settings.UMBREL_PORT}/{method}"
-    headers = {'content-type': 'application/json'}
+    headers = {"content-type": "application/json"}
 
     async with aiohttp.ClientSession() as session:
         async with session.get(url, headers=headers) as response:
@@ -17,4 +17,3 @@ async def mempool_api_call(method: str, params=None):
             data = await response.json()
             print(data)
             return data
-

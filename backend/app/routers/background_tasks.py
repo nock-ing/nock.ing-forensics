@@ -11,10 +11,10 @@ router = APIRouter()
 
 @router.get("/trace-tx-origin", response_model=dict)
 def trace_transaction_to_origin(
-        txid: str,
-        include_tx_details: bool = False,
-        current_user: dict = Depends(get_current_active_user),
-        redis_service: RedisService = Depends(get_redis_service),
+    txid: str,
+    include_tx_details: bool = False,
+    current_user: dict = Depends(get_current_active_user),
+    redis_service: RedisService = Depends(get_redis_service),
 ):
     """
     Trace a Bitcoin transaction back to its origin (coinbase transaction).
@@ -32,7 +32,11 @@ def trace_transaction_to_origin(
     if cached_result:
         if isinstance(cached_result, dict):
             return {"status": "completed", "task_id": task_id, "result": cached_result}
-        return {"status": "completed", "task_id": task_id, "result": json.loads(cached_result)}
+        return {
+            "status": "completed",
+            "task_id": task_id,
+            "result": json.loads(cached_result),
+        }
 
     # Check if this trace is already in progress
     in_progress_key = f"tx-origin-trace-in-progress:{txid}"
@@ -46,13 +50,15 @@ def trace_transaction_to_origin(
     # Set initial task status
     redis_service.set(
         f"task:{task_id}",
-        json.dumps({
-            "status": "pending",
-            "txid": txid,
-            "include_tx_details": include_tx_details,
-            "created_at": datetime.utcnow().isoformat(),
-            "progress": 0
-        }),
+        json.dumps(
+            {
+                "status": "pending",
+                "txid": txid,
+                "include_tx_details": include_tx_details,
+                "created_at": datetime.utcnow().isoformat(),
+                "progress": 0,
+            }
+        ),
     )
 
     # Queue the task with Celery
@@ -61,23 +67,22 @@ def trace_transaction_to_origin(
     return {
         "status": "pending",
         "task_id": task_id,
-        "message": "Transaction origin trace started in background"
+        "message": "Transaction origin trace started in background",
     }
 
 
 @router.get("/trace-tx-origin/status/{task_id}", response_model=dict)
 async def get_trace_task_status(
-        task_id: str,
-        current_user: dict = Depends(get_current_active_user),
-        redis_service: RedisService = Depends(get_redis_service),
+    task_id: str,
+    current_user: dict = Depends(get_current_active_user),
+    redis_service: RedisService = Depends(get_redis_service),
 ):
     """Get the status of a transaction origin trace task."""
     task_data = redis_service.get(f"task:{task_id}")
 
     if not task_data:
         raise HTTPException(
-            status_code=404,
-            detail=f"Task {task_id} not found or expired"
+            status_code=404, detail=f"Task {task_id} not found or expired"
         )
 
     task_info = json.loads(task_data) if isinstance(task_data, str) else task_data
@@ -86,6 +91,8 @@ async def get_trace_task_status(
     if task_info.get("status") == "completed" and "result_key" in task_info:
         result = redis_service.get(task_info["result_key"])
         if result:
-            task_info["result"] = json.loads(result) if isinstance(result, str) else result
+            task_info["result"] = (
+                json.loads(result) if isinstance(result, str) else result
+            )
 
     return task_info

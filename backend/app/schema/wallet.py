@@ -16,7 +16,9 @@ class WalletDB(SQLModel, table=True):
     wallet_type: str = Field(index=True)
     wallet_address: str = Field(index=True)
     balance: str = Field(index=True)
-    created_at: float = Field(default_factory=lambda: datetime.timestamp(datetime.now()))
+    created_at: float = Field(
+        default_factory=lambda: datetime.timestamp(datetime.now())
+    )
     suspicious_illegal_activity: bool = Field(default=False)
 
 

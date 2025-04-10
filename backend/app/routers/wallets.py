@@ -16,21 +16,22 @@ router = APIRouter(prefix="/wallets", tags=["wallets"])
 
 @router.post("/add", response_model=Wallet)
 async def add_wallet(
-        wallet: WalletDB,
-        db: AsyncSession = Depends(get_db),
-        current_user: UserBase = Depends(get_current_active_user)
+    wallet: WalletDB,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserBase = Depends(get_current_active_user),
 ):
     """
     Add a new wallet for the current user.
     """
     try:
-
         query = select(Wallets).where(Wallets.wallet_address == wallet.wallet_address)
         result = await db.execute(query)
         existing_wallet = result.scalar_one_or_none()
 
         if existing_wallet:
-            raise HTTPException(status_code=400, detail="Wallet with this address already exists")
+            raise HTTPException(
+                status_code=400, detail="Wallet with this address already exists"
+            )
 
         # Fetch the complete user entity using the username from current_user
         query = select(Users).where(Users.username == current_user.username)
@@ -47,7 +48,7 @@ async def add_wallet(
             wallet_type=wallet.wallet_type,
             created_at=time.time(),
             balance=wallet.balance if wallet.balance else 0.0,
-            suspicious_illegal_activity=False
+            suspicious_illegal_activity=False,
         )
 
         db.add(db_wallet)
@@ -61,9 +62,9 @@ async def add_wallet(
 
 @router.get("/{wallet_address}", response_model=Wallet)
 async def get_wallet(
-        wallet_address: str,
-        db: AsyncSession = Depends(get_db),
-        current_user: dict = Depends(get_current_active_user)
+    wallet_address: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
 ):
     """
     Get a wallet by its address.
@@ -74,19 +75,24 @@ async def get_wallet(
     Returns:
     - The wallet object if found
     """
-    wallet = await db.query(Wallets).filter(Wallets.wallet_address == wallet_address).first()
+    wallet = (
+        await db.query(Wallets).filter(Wallets.wallet_address == wallet_address).first()
+    )
     if wallet is None:
-        raise HTTPException(status_code=404, detail=f"Wallet with address {wallet_address} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Wallet with address {wallet_address} not found"
+        )
     return wallet
+
 
 @router.get("/", response_model=List[Wallet])
 async def list_wallets(
-        owner: Optional[str] = None,
-        suspicious: Optional[bool] = None,
-        skip: int = 0,
-        limit: int = 100,
-        db: AsyncSession = Depends(get_db),
-        current_user: dict = Depends(get_current_active_user),
+    owner: Optional[str] = None,
+    suspicious: Optional[bool] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
 ):
     """
     List wallets with optional filtering.
@@ -120,11 +126,12 @@ async def list_wallets(
     wallets = result.scalars().all()
     return wallets
 
+
 @router.delete("/{wallet_address}", response_model=dict)
 async def delete_wallet(
-        wallet_address: str,
-        db: AsyncSession = Depends(get_db),
-        current_user: dict = Depends(get_current_active_user)
+    wallet_address: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
 ):
     """
     Delete a wallet.
@@ -140,7 +147,9 @@ async def delete_wallet(
     db_wallet = result.scalar_one_or_none()
 
     if db_wallet is None:
-        raise HTTPException(status_code=404, detail=f"Wallet with address {wallet_address} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Wallet with address {wallet_address} not found"
+        )
 
     try:
         await db.delete(db_wallet)
@@ -148,15 +157,16 @@ async def delete_wallet(
         return {"message": f"Wallet with address {wallet_address} successfully deleted"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to delete wallet: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete wallet: {str(e)}"
+        )
 
 
 @router.patch("/{wallet_address}/flag", response_model=Wallet)
 async def flag_suspicious_activity(
-        wallet_address: str,
-        suspicious: bool = True,
-        db: AsyncSession = Depends(get_db),
-        current_user: dict = Depends(get_current_active_user)
+    wallet_address: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
 ):
     """
     Flag a wallet for suspicious activity.
@@ -173,9 +183,11 @@ async def flag_suspicious_activity(
     db_wallet = result.scalar_one_or_none()
 
     if db_wallet is None:
-        raise HTTPException(status_code=404, detail=f"Wallet with address {wallet_address} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Wallet with address {wallet_address} not found"
+        )
 
-    db_wallet.suspicious_illegal_activity = suspicious
+    db_wallet.suspicious_illegal_activity = not db_wallet.suspicious_illegal_activity
 
     try:
         await db.commit()
@@ -183,4 +195,6 @@ async def flag_suspicious_activity(
         return db_wallet
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to update wallet status: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update wallet status: {str(e)}"
+        )

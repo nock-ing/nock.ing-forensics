@@ -7,6 +7,7 @@ SessionLocal = async_sessionmaker(
     autoflush=False, autocommit=False, bind=engine, class_=AsyncSession
 )
 
+
 # Dependency to get the database session
 async def get_db():
     async with SessionLocal() as session:

@@ -1,6 +1,15 @@
 from fastapi import FastAPI
 
-from app.routers import auth, redis, users, rpc_node, investigations, background_tasks, price, wallets
+from app.routers import (
+    auth,
+    redis,
+    users,
+    rpc_node,
+    investigations,
+    background_tasks,
+    price,
+    wallets,
+)
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,6 +27,7 @@ app.include_router(price.router, tags=["price"])
 app.include_router(background_tasks.router, tags=["Background Tasks"])
 
 app.include_router(wallets.router, tags=["wallets db routes"])
+
 
 @app.get("/health")
 async def health_check():

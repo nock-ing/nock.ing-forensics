@@ -6,6 +6,7 @@ from sqlmodel import Field, SQLModel, Relationship
 if TYPE_CHECKING:
     from app.models.transactions import Transactions
 
+
 class Blocks(SQLModel, table=True):
     id: int = Field(primary_key=True)
     block_hash: str = Field()
