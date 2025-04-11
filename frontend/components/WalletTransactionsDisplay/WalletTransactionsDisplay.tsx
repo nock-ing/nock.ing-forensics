@@ -18,7 +18,7 @@ import {
 import {Badge} from "@/components/ui/badge";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {WalletTxData} from "@/types/wallet.types";
-import {Copy, ExternalLink} from "lucide-react";
+import {Copy, ExternalLink, FileDown} from "lucide-react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import Link from "next/link";
 import {satoshisToBTC} from "@/utils/formatters";
@@ -28,6 +28,8 @@ import {useHistoricalPrices} from "@/hooks/useHistoricalPrices";
 import {useCoinAge} from "@/hooks/useCoinAge";
 import PriceBasedGainCalculator from "@/components/PriceBasedGainCalculator/PriceBasedGainCalculator";
 import {useCurrentPrice} from "@/hooks/useCurrentPrice";
+import {Button} from "@/components/ui/button";
+import {exportToCSV} from "@/utils/exportAsCsv";
 
 
 interface WalletTransactionsDisplayProps {
@@ -73,10 +75,24 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
         <Card className="w-full">
             <CardHeader>
                 <CardTitle>Wallet Transactions</CardTitle>
-                <CardDescription>
-                    Address: <span className="font-mono text-sm">{data.address}</span>
-                    <Badge className="ml-2">{data.transactions.length} transactions</Badge>
+                <CardDescription className={"flex items-center justify-between"}>
+                    <div>
+                        Address: <span className="font-mono text-sm">{data.address}</span>
+                        <Badge className="ml-2">{data.transactions.length} transactions</Badge>
+                    </div>
+                    <div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => exportToCSV(data)}
+                            className="flex items-center gap-2"
+                        >
+                            <FileDown className="h-4 w-4"/>
+                            Export as CSV
+                        </Button>
+                    </div>
                 </CardDescription>
+
             </CardHeader>
             <CardContent>
                 <ScrollArea className="h-[500px]">
