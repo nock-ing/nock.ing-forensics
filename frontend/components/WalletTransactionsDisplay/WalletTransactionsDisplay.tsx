@@ -43,6 +43,40 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
     const {priceData} = useHistoricalPrices(selectedTxTimestamp);
     const {coinAgeData, isLoading: coinAgeLoading} = useCoinAge(data?.address);
     const currentPrice = useCurrentPrice();
+    const [historicalPrices, setHistoricalPrices] = React.useState<{ [key: string]: any }>({});
+    const handleExportToCSV = () => {
+        // Use the historicalPrices state that you already have in the component
+        exportToCSV(data, priceData, coinAgeData, currentPrice, historicalPrices);
+    };
+
+    // Fetch historical prices for all relevant timestamps
+    React.useEffect(() => {
+        const fetchHistoricalPrices = async () => {
+            if (!coinAgeData?.coin_age_details) return;
+
+            const newPrices: { [key: string]: any } = {};
+            for (const detail of coinAgeData.coin_age_details) {
+                const receivedTimestamp = blockToTimestampMap?.[detail.received_block] ||
+                    (detail.received_block * 600 + 1230768000).toString();
+                const spentTimestamp = blockToTimestampMap?.[detail.spent_block] ||
+                    (detail.spent_block * 600 + 1230768000).toString();
+
+                const [receivedPrice, spentPrice] = await Promise.all([
+                    fetch(`/api/historical-price?timestamp=${receivedTimestamp}`).then(r => r.json()),
+                    detail.spent_block ? fetch(`/api/historical-price?timestamp=${spentTimestamp}`).then(r => r.json()) : null
+                ]);
+
+                newPrices[receivedTimestamp] = receivedPrice;
+                if (spentPrice) {
+                    newPrices[spentTimestamp] = spentPrice;
+                }
+            }
+            setHistoricalPrices(newPrices);
+        };
+
+        fetchHistoricalPrices();
+    }, [coinAgeData]);
+
     const blockToTimestampMap = React.useMemo(() => {
         const map: Record<number, number> = {};
 
@@ -84,7 +118,7 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => exportToCSV(data)}
+                            onClick={() => exportToCSV(data, priceData, coinAgeData, currentPrice?.priceData, historicalPrices)}
                             className="flex items-center gap-2"
                         >
                             <FileDown className="h-4 w-4"/>
