@@ -41,64 +41,6 @@ export const exportToCSV = (
         "Held for",
         "Gains"
     ];
-    const blockToTimestampMap = React.useMemo(() => {
-        const map: Record<number, number> = {};
-
-        // Populate map from transaction data
-        data.transactions.forEach(tx => {
-            if (tx.status?.block_height && tx.status?.block_time) {
-                map[tx.status.block_height] = tx.status.block_time;
-            }
-        });
-
-        return map;
-    }, [data]);
-
-
-    let receivedTimestamp;
-    let spentTimestamp;
-    let realizedGain: { realizedGain: number; percentageGain: number };
-    coinAgeData?.coin_age_details.map(detail => {
-        receivedTimestamp = blockToTimestampMap?.[detail.received_block] ||
-            (detail.received_block * 600 + 1230768000).toString();
-        spentTimestamp = blockToTimestampMap?.[detail.spent_block] ||
-            (detail.spent_block * 600 + 1230768000).toString();
-        const {priceData: receivedPriceData} = useHistoricalPrices(receivedTimestamp?.toString());
-        const {priceData: spentPriceData} = isRealized
-            // eslint-disable-next-line react-hooks/rules-of-hooks
-            ? useHistoricalPrices(spentTimestamp?.toString())
-            : {priceData: null};
-
-        if (receivedPriceData?.prices &&
-            receivedPriceData.prices.length > 0 &&
-            detail.amount) {
-
-            const acquisitionPrice = receivedPriceData.prices[0].EUR;
-            let sellingPrice;
-
-            if (isRealized && spentPriceData?.prices && spentPriceData.prices.length > 0) {
-                // Use historical selling price for realized gains
-                sellingPrice = spentPriceData.prices[0].EUR;
-            } else {
-                // Use current price for unrealized gains
-                sellingPrice = currentPrice?.EUR;
-
-            }
-
-
-            if (acquisitionPrice && sellingPrice) {
-                realizedGain = calculateRealizedGain(acquisitionPrice, sellingPrice, detail.amount);
-                console.log(realizedGain);
-                return realizedGain;
-            }
-        }
-
-
-        return null;
-
-    });
-
-
 
 
     // Format transactions data into rows
@@ -113,8 +55,6 @@ export const exportToCSV = (
             tx.size,
             satoshisToBTC(getWalletAmount(tx, data.address)) || 0,
             // Historical value at that time,
-            realizedGain.realizedGain ? Math.abs(realizedGain.realizedGain).toFixed(2) : 0,
-
 
         ].join(",");
     });
