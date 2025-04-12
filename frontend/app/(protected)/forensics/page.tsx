@@ -14,6 +14,7 @@ import {useTxInsightFetcher} from "@/hooks/useTxInsightFetcher";
 import {useWalletInsightFetcher} from "@/hooks/useWalletInsightFetcher";
 import {WalletTransactionsDisplay} from "@/components/WalletTransactionsDisplay";
 import WalletInfo from "@/components/WalletInfo/WalletInfo";
+import WalletActivityHeatmap from "@/components/WalletActivityHeatmap/WalletActivityHeatmap";
 
 
 export default function ForensicsPage() {
@@ -139,6 +140,9 @@ export default function ForensicsPage() {
                     <div>
                         <WalletInfo walletData={walletData} walletError={walletError} walletLoading={walletLoading}
                                     walletTransactions={walletTransactions}/>
+                    </div>
+                    <div className={"px-6"}>
+                        <WalletActivityHeatmap walletTransactions={walletTransactions}/>
                     </div>
                     <div>
                         <WalletTransactionsDisplay data={walletTransactions}/>
