@@ -1,20 +1,6 @@
 import React from "react";
-import {
-    Table,
-    TableBody,
-    TableCaption,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from "@/components/ui/table";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
-} from "@/components/ui/card";
+import {Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {WalletTxData} from "@/types/wallet.types";
@@ -30,6 +16,8 @@ import PriceBasedGainCalculator from "@/components/PriceBasedGainCalculator/Pric
 import {useCurrentPrice} from "@/hooks/useCurrentPrice";
 import {Button} from "@/components/ui/button";
 import {exportToCSV} from "@/utils/exportAsCsv";
+import {getCookie} from "cookies-next";
+import {HistoricalPrice} from "@/types/historicalPrice.types";
 
 
 interface WalletTransactionsDisplayProps {
@@ -43,40 +31,6 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
     const {priceData} = useHistoricalPrices(selectedTxTimestamp);
     const {coinAgeData, isLoading: coinAgeLoading} = useCoinAge(data?.address);
     const currentPrice = useCurrentPrice();
-    const [historicalPrices, setHistoricalPrices] = React.useState<{ [key: string]: any }>({});
-    const handleExportToCSV = () => {
-        // Use the historicalPrices state that you already have in the component
-        exportToCSV(data, priceData, coinAgeData, currentPrice, historicalPrices);
-    };
-
-    // Fetch historical prices for all relevant timestamps
-    React.useEffect(() => {
-        const fetchHistoricalPrices = async () => {
-            if (!coinAgeData?.coin_age_details) return;
-
-            const newPrices: { [key: string]: any } = {};
-            for (const detail of coinAgeData.coin_age_details) {
-                const receivedTimestamp = blockToTimestampMap?.[detail.received_block] ||
-                    (detail.received_block * 600 + 1230768000).toString();
-                const spentTimestamp = blockToTimestampMap?.[detail.spent_block] ||
-                    (detail.spent_block * 600 + 1230768000).toString();
-
-                const [receivedPrice, spentPrice] = await Promise.all([
-                    fetch(`/api/historical-price?timestamp=${receivedTimestamp}`).then(r => r.json()),
-                    detail.spent_block ? fetch(`/api/historical-price?timestamp=${spentTimestamp}`).then(r => r.json()) : null
-                ]);
-
-                newPrices[receivedTimestamp] = receivedPrice;
-                if (spentPrice) {
-                    newPrices[spentTimestamp] = spentPrice;
-                }
-            }
-            setHistoricalPrices(newPrices);
-        };
-
-        fetchHistoricalPrices();
-    }, [coinAgeData]);
-
     const blockToTimestampMap = React.useMemo(() => {
         const map: Record<number, number> = {};
 
@@ -90,6 +44,44 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
         return map;
     }, [data]);
 
+    const [historicalPrices, setHistoricalPrices] = React.useState<{ [key: string]: HistoricalPrice }>({});
+    React.useEffect(() => {
+        if (!data?.transactions) return;
+
+        const fetchAllPrices = async () => {
+            const prices: { [key: string]: HistoricalPrice } = {};
+
+            // Create a function to fetch a single price
+            const fetchPrice = async (timestamp: string) => {
+                try {
+                    const token = getCookie("token") || localStorage.getItem("token");
+                    const response = await fetch(`/api/historical-price?timestamp=${timestamp}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                        },
+                    });
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                } catch (error) {
+                    console.error('Error fetching price data:', error);
+                }
+                return null;
+            };
+
+            // Fetch prices for all transactions with timestamps
+            for (const tx of data.transactions) {
+                const timestamp = tx.status?.block_time?.toString();
+                if (timestamp && !prices[timestamp]) {
+                    prices[timestamp] = await fetchPrice(timestamp);
+                }
+            }
+
+            setHistoricalPrices(prices);
+        };
+
+        fetchAllPrices();
+    }, [data?.transactions]);
 
     const handleSelectTransaction = (timestamp: string | undefined) => {
         setSelectedTxTimestamp(timestamp);
@@ -126,7 +118,6 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                         </Button>
                     </div>
                 </CardDescription>
-
             </CardHeader>
             <CardContent>
                 <ScrollArea className="h-[500px]">
