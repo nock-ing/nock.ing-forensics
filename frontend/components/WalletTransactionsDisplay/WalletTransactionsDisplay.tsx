@@ -1,24 +1,10 @@
 import React from "react";
-import {
-    Table,
-    TableBody,
-    TableCaption,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from "@/components/ui/table";
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle
-} from "@/components/ui/card";
+import {Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {WalletTxData} from "@/types/wallet.types";
-import {Copy, ExternalLink} from "lucide-react";
+import {Copy, ExternalLink, FileDown} from "lucide-react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import Link from "next/link";
 import {satoshisToBTC} from "@/utils/formatters";
@@ -28,6 +14,10 @@ import {useHistoricalPrices} from "@/hooks/useHistoricalPrices";
 import {useCoinAge} from "@/hooks/useCoinAge";
 import PriceBasedGainCalculator from "@/components/PriceBasedGainCalculator/PriceBasedGainCalculator";
 import {useCurrentPrice} from "@/hooks/useCurrentPrice";
+import {Button} from "@/components/ui/button";
+import {exportToCSV} from "@/utils/exportAsCsv";
+import {getCookie} from "cookies-next";
+import {HistoricalPrice} from "@/types/historicalPrice.types";
 
 
 interface WalletTransactionsDisplayProps {
@@ -54,6 +44,44 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
         return map;
     }, [data]);
 
+    const [historicalPrices, setHistoricalPrices] = React.useState<{ [key: string]: HistoricalPrice }>({});
+    React.useEffect(() => {
+        if (!data?.transactions) return;
+
+        const fetchAllPrices = async () => {
+            const prices: { [key: string]: HistoricalPrice } = {};
+
+            // Create a function to fetch a single price
+            const fetchPrice = async (timestamp: string) => {
+                try {
+                    const token = getCookie("token") || localStorage.getItem("token");
+                    const response = await fetch(`/api/historical-price?timestamp=${timestamp}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                        },
+                    });
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                } catch (error) {
+                    console.error('Error fetching price data:', error);
+                }
+                return null;
+            };
+
+            // Fetch prices for all transactions with timestamps
+            for (const tx of data.transactions) {
+                const timestamp = tx.status?.block_time?.toString();
+                if (timestamp && !prices[timestamp]) {
+                    prices[timestamp] = await fetchPrice(timestamp);
+                }
+            }
+
+            setHistoricalPrices(prices);
+        };
+
+        fetchAllPrices();
+    }, [data?.transactions]);
 
     const handleSelectTransaction = (timestamp: string | undefined) => {
         setSelectedTxTimestamp(timestamp);
@@ -73,9 +101,22 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
         <Card className="w-full">
             <CardHeader>
                 <CardTitle>Wallet Transactions</CardTitle>
-                <CardDescription>
-                    Address: <span className="font-mono text-sm">{data.address}</span>
-                    <Badge className="ml-2">{data.transactions.length} transactions</Badge>
+                <CardDescription className={"flex items-center justify-between"}>
+                    <div>
+                        Address: <span className="font-mono text-sm">{data.address}</span>
+                        <Badge className="ml-2">{data.transactions.length} transactions</Badge>
+                    </div>
+                    <div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => exportToCSV(data, priceData, coinAgeData, currentPrice?.priceData, historicalPrices)}
+                            className="flex items-center gap-2"
+                        >
+                            <FileDown className="h-4 w-4"/>
+                            Export as CSV
+                        </Button>
+                    </div>
                 </CardDescription>
             </CardHeader>
             <CardContent>
