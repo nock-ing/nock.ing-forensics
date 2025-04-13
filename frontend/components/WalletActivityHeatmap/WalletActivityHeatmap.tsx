@@ -1,185 +1,218 @@
-"use client";
-import React, {useMemo, useState} from 'react';
-import {Tooltip} from '@/components/ui/tooltip';
-import {TooltipContent, TooltipProvider, TooltipTrigger} from '@/components/ui/tooltip';
-import {format, parseISO, eachDayOfInterval, startOfYear, endOfYear} from 'date-fns';
+// components/WalletActivityHeatmap/WalletActivityHeatmap.tsx
+import React, {useState, useMemo} from 'react';
+import {format, parseISO, startOfYear, endOfYear, eachDayOfInterval, getYear} from 'date-fns';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {cn} from '@/lib/utils';
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 
-interface WalletActivityHeatmapProps {
-    walletTransactions?: any; // Update with your actual type
+interface Transaction {
+    timestamp: string; // ISO string format
+    // other transaction properties you might have
 }
 
-const WalletActivityHeatmap: React.FC<WalletActivityHeatmapProps> = ({walletTransactions}) => {
+interface WalletActivityHeatmapProps {
+    transactions: Transaction[];
+    className?: string;
+}
+
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const WalletActivityHeatmap: React.FC<WalletActivityHeatmapProps> = ({transactions, className}) => {
+    // Get list of available years from transactions
+    const availableYears = useMemo(() => {
+        const years = transactions.map(tx => getYear(parseISO(tx.timestamp)));
+        return [...new Set(years)].sort((a, b) => b - a); // Sort descending
+    }, [transactions]);
+
+    // Default to most active year or current year if no transactions
+    const mostActiveYear = useMemo(() => {
+        if (availableYears.length === 0) return new Date().getFullYear();
+
+        const txCountByYear: Record<number, number> = {};
+        transactions.forEach(tx => {
+            const year = getYear(parseISO(tx.timestamp));
+            txCountByYear[year] = (txCountByYear[year] || 0) + 1;
+        });
+
+        return Object.entries(txCountByYear)
+            .sort((a, b) => b[1] - a[1]) // Sort by count descending
+            .map(([year]) => parseInt(year))[0];
+    }, [transactions, availableYears]);
+
+    const [selectedYear, setSelectedYear] = useState<number>(mostActiveYear);
+
+    // Generate daily activity data for the selected year
     const activityData = useMemo(() => {
-        if (!walletTransactions?.txs?.length) return {};
+        const startDate = startOfYear(new Date(selectedYear, 0, 1));
+        const endDate = endOfYear(startDate);
 
-        // Create a map of dates to transaction counts
-        const txByDate: Record<string, number> = {};
+        // Create array of all days in the year
+        const allDays = eachDayOfInterval({start: startDate, end: endDate});
 
-        walletTransactions.txs.forEach((tx: any) => {
-            // Assuming tx has a timestamp or date field
-            const date = format(new Date(tx.status.block_time * 1000), 'yyyy-MM-dd');
-            txByDate[date] = (txByDate[date] || 0) + 1;
+        // Create a map of counts by date string
+        const countsByDate: Record<string, number> = {};
+
+        // Filter transactions for selected year and count by date
+        transactions
+            .filter(tx => getYear(parseISO(tx.timestamp)) === selectedYear)
+            .forEach(tx => {
+                const dateStr = format(parseISO(tx.timestamp), 'yyyy-MM-dd');
+                countsByDate[dateStr] = (countsByDate[dateStr] || 0) + 1;
+            });
+
+        // Max count for color scaling
+        const maxCount = Math.max(1, ...Object.values(countsByDate));
+
+        // Map all days to activity data
+        return allDays.map(date => {
+            const dateStr = format(date, 'yyyy-MM-dd');
+            const count = countsByDate[dateStr] || 0;
+            return {
+                date,
+                dateStr,
+                count,
+                intensity: count === 0 ? 0 : Math.ceil((count / maxCount) * 4), // 0-4 intensity levels
+            };
+        });
+    }, [transactions, selectedYear]);
+
+    // Group activity data by week for display
+    const activityByWeek = useMemo(() => {
+        const weeks: typeof activityData[] = [];
+        let currentWeek: typeof activityData = [];
+
+        activityData.forEach((day, index) => {
+            const dayOfWeek = day.date.getDay();
+
+            // If it's the first day or a Sunday, start a new week
+            if (index === 0 || dayOfWeek === 0) {
+                if (currentWeek.length > 0) {
+                    weeks.push(currentWeek);
+                }
+
+                currentWeek = [];
+
+                // Fill in empty days at the start of the first week
+                if (index === 0 && dayOfWeek !== 0) {
+                    for (let i = 0; i < dayOfWeek; i++) {
+                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                        // @ts-expect-error
+                        currentWeek.push(null);
+                    }
+                }
+            }
+
+            currentWeek.push(day);
+
+            // If it's the last day, push the final week
+            if (index === activityData.length - 1) {
+                weeks.push(currentWeek);
+            }
         });
 
-        return txByDate;
-    }, [walletTransactions]);
+        return weeks;
+    }, [activityData]);
 
-    const yearWithMostActivity = useMemo(() => {
-        // Default to 2017 (or any reasonable default) rather than current year
-        if (!walletTransactions?.txs?.length) {
-            console.log("No transaction data available, defaulting to 2017");
-            return 2017; // A reasonable default for Bitcoin transactions
+    // Color mapping based on intensity level
+    const getColorClass = (intensity: number): string => {
+        switch (intensity) {
+            case 0:
+                return 'bg-gray-100 dark:bg-gray-800';
+            case 1:
+                return 'bg-green-100 dark:bg-green-900';
+            case 2:
+                return 'bg-green-300 dark:bg-green-700';
+            case 3:
+                return 'bg-green-500 dark:bg-green-500';
+            case 4:
+                return 'bg-green-700 dark:bg-green-300';
+            default:
+                return 'bg-gray-100 dark:bg-gray-800';
         }
-
-        console.log("Total transactions to analyze:", walletTransactions.txs.length);
-
-        // Count transactions by year
-        const txCountByYear: Record<string, number> = {};
-        let validTransactionsFound = 0;
-
-        walletTransactions.txs.forEach((tx: any, index: number) => {
-            // For debugging, log a sample of transactions
-            if (index < 3) {
-                console.log(`Transaction ${index} sample:`, {
-                    txid: tx.txid,
-                    blockTime: tx.status?.block_time,
-                    status: tx.status
-                });
-            }
-
-            // Make sure we have the data we need
-            if (!tx.status?.block_time) {
-                console.warn("Transaction missing block_time:", tx);
-                return;
-            }
-
-            try {
-                // Explicitly convert to timestamp in milliseconds
-                let timestamp: number;
-
-                if (typeof tx.status.block_time === 'number') {
-                    // Unix timestamp is typically in seconds, so convert to milliseconds
-                    timestamp = tx.status.block_time * 1000;
-                } else {
-                    // Try parsing as string
-                    timestamp = Date.parse(tx.status.block_time);
-                }
-
-                if (isNaN(timestamp)) {
-                    console.warn(`Invalid timestamp for transaction ${index}:`, tx.status.block_time);
-                    return;
-                }
-
-                const txDate = new Date(timestamp);
-                const year = txDate.getFullYear();
-
-                // Sanity check the year
-                if (year < 2009 || year > 2024) {
-                    console.warn(`Suspicious year ${year} for transaction ${index}:`, tx);
-                    return;
-                }
-
-                txCountByYear[year] = (txCountByYear[year] || 0) + 1;
-                validTransactionsFound++;
-
-            } catch (error) {
-                console.error(`Error processing transaction ${index}:`, error);
-            }
-        });
-
-        console.log(`Found ${validTransactionsFound} valid transactions with dates`);
-        console.log("Transaction counts by year:", txCountByYear);
-
-        // Manual check if we actually found any transactions
-        if (validTransactionsFound === 0) {
-            console.warn("No valid transactions with dates found!");
-            return 2017; // Fallback to 2017 as default
-        }
-
-        // Find the year with the most transactions
-        let maxYear = 2017; // Default to 2017 instead of current year
-        let maxCount = 0;
-
-        Object.entries(txCountByYear).forEach(([yearStr, count]) => {
-            const year = parseInt(yearStr);
-            console.log(`Checking year ${year} with ${count} transactions`);
-
-            if (count > maxCount) {
-                maxCount = count;
-                maxYear = year;
-                console.log(`New max year: ${maxYear} with ${maxCount} transactions`);
-            }
-        });
-
-        console.log("Final year with most activity:", maxYear, "with", maxCount, "transactions");
-        return maxYear;
-    }, [walletTransactions]);
-
-    const yearDays = useMemo(() => {
-        const year = yearWithMostActivity;
-        const start = new Date(year, 0, 1); // January 1st of the target year
-        const end = new Date(year, 11, 31); // December 31st of the target year
-        return eachDayOfInterval({start, end});
-    }, [yearWithMostActivity]);
-
-
-    // Get max count for color scaling
-    const maxCount = Math.max(...Object.values(activityData), 1);
-
-    const getCellColor = (count: number) => {
-        if (!count) return 'bg-gray-100 dark:bg-gray-800';
-        const intensity = Math.min(1, count / maxCount);
-        // Return progressively darker green based on intensity
-        if (intensity < 0.2) return 'bg-green-100 dark:bg-green-900';
-        if (intensity < 0.4) return 'bg-green-200 dark:bg-green-800';
-        if (intensity < 0.6) return 'bg-green-300 dark:bg-green-700';
-        if (intensity < 0.8) return 'bg-green-400 dark:bg-green-600';
-        return 'bg-green-500 dark:bg-green-500';
     };
 
-    if (!walletTransactions) {
-        return <div>No transaction data available</div>;
-    }
-
-    if (!activityData) {
-        return <div>No activity data available</div>;
-    }
-
-
     return (
-        <div className="space-y-4">
-            <h3 className="text-lg font-medium">Transaction Activity</h3>
-
-            <div className="flex flex-wrap gap-1">
-                <TooltipProvider>
-                    {yearDays.map((day) => {
-                        const dateStr = format(day, 'yyyy-MM-dd');
-                        const count = activityData[dateStr] || 0;
-
-                        return (
-                            <Tooltip key={dateStr}>
-                                <TooltipTrigger asChild>
-                                    <div
-                                        className={`w-3 h-3 rounded-sm ${getCellColor(count)}`}
-                                        aria-label={`${count} transactions on ${format(day, 'MMM d, yyyy')}`}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>{format(day, 'MMM d, yyyy')}: {count} transactions</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        );
-                    })}
-                </TooltipProvider>
+        <div className={cn("flex flex-col gap-4", className)}>
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium">Transaction Activity</h3>
+                <Select
+                    value={String(selectedYear)}
+                    onValueChange={(value) => setSelectedYear(parseInt(value))}
+                >
+                    <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Select Year"/>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableYears.map(year => (
+                            <SelectItem key={year} value={String(year)}>
+                                {year}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
-            <div className="flex items-center text-xs gap-1">
+
+            <div className="flex">
+                {/* Day labels on the left */}
+                <div className="flex flex-col justify-start pt-[26px] pr-2">
+                    {DAY_LABELS.map((day, index) => (
+                        <div key={day} className={cn(
+                            "text-xs text-muted-foreground h-[11px] leading-none",
+                            index === 0 && "h-[13px]",
+                            "mt-[2px]"
+                        )}>
+                            {index % 2 === 0 ? day : ""}
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex flex-col flex-1">
+                    {/* Month labels on top */}
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1 px-1">
+                        {MONTH_LABELS.map(month => (
+                            <div key={month} className="flex-1 text-center">{month}</div>
+                        ))}
+                    </div>
+
+                    {/* Activity grid */}
+                    <div className="grid grid-flow-col auto-cols-fr gap-[1px]">
+                        {activityByWeek.map((week, weekIndex) => (
+                            <div key={weekIndex} className="flex flex-col gap-[1px]">
+                                {week.map((day, dayIndex) => (
+                                    <TooltipProvider key={dayIndex}>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <div
+                                                    className={cn(
+                                                        "h-[15px] w-[15px] rounded-sm",
+                                                        day ? getColorClass(day.intensity) : "invisible"
+                                                    )}
+                                                />
+                                            </TooltipTrigger>
+                                            {day && (
+                                                <TooltipContent>
+                                                    <p>{day.count} transactions on {format(day.date, 'MMM d, yyyy')}</p>
+                                                </TooltipContent>
+                                            )}
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                ))}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center text-xs text-muted-foreground gap-2 self-end">
                 <span>Less</span>
-                <div className="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-800"/>
-                <div className="w-3 h-3 rounded-sm bg-green-100 dark:bg-green-900"/>
-                <div className="w-3 h-3 rounded-sm bg-green-200 dark:bg-green-800"/>
-                <div className="w-3 h-3 rounded-sm bg-green-300 dark:bg-green-700"/>
-                <div className="w-3 h-3 rounded-sm bg-green-400 dark:bg-green-600"/>
-                <div className="w-3 h-3 rounded-sm bg-green-500 dark:bg-green-500"/>
+                {[0, 1, 2, 3, 4].map(intensity => (
+                    <div
+                        key={intensity}
+                        className={cn("h-[10px] w-[10px] rounded-sm", getColorClass(intensity))}
+                    />
+                ))}
                 <span>More</span>
             </div>
         </div>

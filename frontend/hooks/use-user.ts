@@ -8,10 +8,10 @@ export function useUser() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
+    const token = getCookie('token');
 
     useEffect(() => {
         const checkAuthAndFetchUser = async () => {
-            const token = getCookie('token') as string | undefined;
 
             if (!token) {
                 router.push('/');
@@ -45,13 +45,17 @@ export function useUser() {
 
     const signOut = async () => {
         try {
+            console.log(token);
             const response = await fetch('/api/logout', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
+                credentials: 'include',
             });
 
+            setUser(null);
             if (!response.ok) {
                 throw new Error('Failed to sign out');
             }

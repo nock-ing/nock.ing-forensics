@@ -1,16 +1,20 @@
 import { cookies } from "next/headers";
 import {NextResponse} from "next/server";
+import {getBearerTokenFromHeaders} from "@/lib/auth";
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 
 export async function POST() {
     try {
 
+        const token = getBearerTokenFromHeaders();
+
         const url = `${BACKEND_URL}/logout`;
         const response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`,
             },
         });
 

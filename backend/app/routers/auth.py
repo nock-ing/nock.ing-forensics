@@ -61,18 +61,22 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
 
 @router.post("/logout")
 async def logout(
-    response: Response,
-    token: str = Depends(oauth2_scheme),
-    redis_service: RedisService = Depends(get_redis_service),
+        response: Response,
+        token: str = Depends(oauth2_scheme),
+        redis_service: RedisService = Depends(get_redis_service),
 ):
-    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-    jti = payload.get("jti")
-    if jti:
-        redis_service.set(
-            f"denylist:{jti}",
-            "denylisted",
-            expiry=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        )
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        jti = payload.get("jti")
+        if jti:
+            redis_service.set(
+                f"denylist:{jti}",
+                "denylisted",
+                expiry=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            )
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        # If token is already expired, we just need to clear the cookie
+        pass
 
     response.set_cookie(
         key="token",
@@ -85,6 +89,7 @@ async def logout(
         path="/",
     )
     return {"message": "Logout successful"}
+
 
 
 # Validate route token

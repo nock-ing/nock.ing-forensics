@@ -1,7 +1,7 @@
 "use client";
 
 import {ColumnDef} from "@tanstack/react-table"
-import {TransactionId} from "@/types/transactionId.types";
+import {RecentWallet} from "@/types/wallet.types";
 import {MoreHorizontal} from "lucide-react"
 import {Button} from "@/components/ui/button"
 import {
@@ -14,15 +14,16 @@ import {
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link";
 
-export const columns: ColumnDef<TransactionId>[] = [
+export const walletColumns: ColumnDef<RecentWallet>[] = [
     {
-        accessorKey: "txid",
-        header: "Transaction ID",
+        accessorKey: "address",
+        header: "Wallet Address",
         cell: ({row}) => {
-            const txid = row.getValue("txid") as string;
+            const address = row.original;
             return (
-                <Link href={`/forensics?input=${txid}&isTxid=true`} className="hover:underline">
-                    {txid}
+                <Link href={`/forensics?input=${address.wallet}&isTxid=false`}
+                      className="hover:underline">
+                    {address.wallet}
                 </Link>
             );
         },
@@ -34,7 +35,7 @@ export const columns: ColumnDef<TransactionId>[] = [
     {
         id: "actions",
         cell: ({row}) => {
-            const txid = row.original;
+            const wallet = row.original;
 
             return (
                 <DropdownMenu>
@@ -47,12 +48,12 @@ export const columns: ColumnDef<TransactionId>[] = [
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem
-                            onClick={() => navigator.clipboard.writeText(txid.txid)}
+                            onClick={() => navigator.clipboard.writeText(wallet.wallet)}
                         >
-                            Copy Transaction ID
+                            Copy Wallet Address
                         </DropdownMenuItem>
                         <DropdownMenuSeparator/>
-                        <Link href={`/forensics?input=${txid.txid}&isTxid=true`}><DropdownMenuItem>View in
+                        <Link href={`/forensics?input=${wallet.wallet}&isTxid=false`}><DropdownMenuItem>View in
                             Forensics</DropdownMenuItem></Link>
                     </DropdownMenuContent>
                 </DropdownMenu>

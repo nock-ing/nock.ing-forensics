@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useToast } from "@/hooks/use-toast";
-import { useForm } from 'react-hook-form';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
+import React, {useState} from 'react';
+import {useToast} from "@/hooks/use-toast";
+import {useForm} from 'react-hook-form';
+import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form';
+import {z} from 'zod';
+import {zodResolver} from '@hookform/resolvers/zod';
+import {Input} from '@/components/ui/input';
+import {Button} from '@/components/ui/button';
+import {useRouter} from 'next/navigation';
+import RecentSearches from "@/components/RecentSearches/RecentSearches";
 
 const btcSchema = z.object({
-    input: z.string().min(1, { message: 'Input is required' }),
+    input: z.string().min(1, {message: 'Input is required'}),
     isTxid: z.boolean(),
     isWalletAddress: z.boolean(),
 });
@@ -20,7 +21,7 @@ type FormValues = z.infer<typeof btcSchema>;
 
 export default function Dashboard() {
     const [isLoading, setIsLoading] = useState(false);
-    const { toast } = useToast();
+    const {toast} = useToast();
     const router = useRouter();
 
     const form = useForm<FormValues>({
@@ -67,19 +68,19 @@ export default function Dashboard() {
     // 171056d23f13fe5ee896006495abfcd6670ccb58e5371e2b89c894ff6fea4038
     // 37jKPSmbEGwgfacCr2nayn1wTaqMAbA94Z
     return (
-        <div className="flex justify-center items-center min-h-screen p-4">
+        <div className="flex flex-col justify-center items-center min-h-screen p-4">
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 w-full max-w-md">
                     <FormField
                         control={form.control}
                         name="input"
-                        render={({ field }) => (
+                        render={({field}) => (
                             <FormItem>
                                 <FormLabel>Enter Transaction ID or Wallet Address</FormLabel>
                                 <FormControl>
-                                    <Input {...field} placeholder="Enter txid or wallet address" />
+                                    <Input {...field} placeholder="Enter txid or wallet address"/>
                                 </FormControl>
-                                <FormMessage />
+                                <FormMessage/>
                             </FormItem>
                         )}
                     />
@@ -88,6 +89,10 @@ export default function Dashboard() {
                     </Button>
                 </form>
             </Form>
+            <div className={"mt-4 "}>
+                Recent Searches
+                <RecentSearches/>
+            </div>
         </div>
     );
 }

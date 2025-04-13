@@ -59,8 +59,16 @@ type Transaction = {
     vout: TxOutput[];
 };
 
-// Complete wallet transaction data type
 export type WalletTxData = {
     address: string;
     transactions: Transaction[];
 };
+
+export type RecentWallets = {
+    wallets: RecentWallet[];
+}
+
+export type RecentWallet = {
+    wallet: string;
+    added: string;
+}
