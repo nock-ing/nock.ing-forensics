@@ -511,53 +511,6 @@ async def get_coin_age_by_txid(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/address/txs", response_model=dict)
-async def get_address_txs(
-    address: str,
-    current_user: dict = Depends(get_current_active_user),
-    redis_service: RedisService = Depends(get_redis_service),
-):
-    """
-    Fetch all transactions related to a given address.
-    """
-    cache_key = f"address-txs:{address}"
-    try:
-        cached_address = redis_service.get(cache_key)
-        if cached_address:
-            if isinstance(cached_address, dict):
-                return cached_address
-            return json.loads(cached_address)
-        # Fetch address transactions
-        address_txs = await mempool_api_call(f"api/address/{address}/txs")
-
-        if not address_txs:
-            raise HTTPException(status_code=404, detail=f"Address {address} not found.")
-
-        redis_service.lpush_trim(
-            "wallet",
-            json.dumps({"wallet": address, "added": datetime.now().isoformat()}),
-        )
-
-        redis_service.set(
-            cache_key,
-            json.dumps(
-                {
-                    "address": address,
-                    "transactions": address_txs,
-                }
-            ),
-        )
-
-        return {
-            "address": address,
-            "transactions": address_txs,
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 @router.get("/address/txs/summary", response_model=dict)
 async def get_address_txs_summary(
     address: str,
@@ -565,7 +518,8 @@ async def get_address_txs_summary(
     redis_service: RedisService = Depends(get_redis_service),
 ):
     """
-    Fetch all transactions related to a given address and calculate accurate totals.
+    Fetch all transactions related to a given address using pagination
+    and calculate accurate totals.
     """
     cache_key = f"address-txs-summary:{address}"
     try:
@@ -574,82 +528,173 @@ async def get_address_txs_summary(
             if isinstance(cached_data, dict):
                 return cached_data
             return json.loads(cached_data)
+    except Exception as cache_err:
+         print(f"Cache retrieval error: {cache_err}")
 
-        # Fetch address transactions
-        address_txs = await mempool_api_call(f"api/address/{address}/txs")
 
-        if not address_txs:
-            raise HTTPException(status_code=404, detail=f"Address {address} not found.")
+    all_address_txs = []
+    last_confirmed_txid = None
+    has_more_confirmed_txs = True
+    page_count = 0 # Debugging
 
-        # Calculate accurate totals
-        total_received = 0
-        total_sent = 0
-        transactions = []
-        seen_txids = set()  # To track unique transactions
+    # --- Fetch Initial Page (Mempool + first 25 confirmed) ---
+    try:
+        page_count += 1
+        initial_url = f"api/address/{address}/txs"
+        print(f"Fetching initial page from Mempool API: {initial_url}") # Debugging
+        current_page_txs = await mempool_api_call(initial_url)
 
-        for tx in address_txs:
-            txid = tx["txid"]
-
-            # To avoid double counting in case of duplicate txids
-            if txid in seen_txids:
-                continue
-            seen_txids.add(txid)
-
-            received_in_tx = 0
-            sent_in_tx = 0
-
-            # Record transaction details for debugging
-            tx_detail = {
-                "txid": txid,
-                "block_time": tx["status"].get("block_time", 0),
-                "received": 0,
-                "sent": 0,
+        if not current_page_txs:
+            # Address found, but no transactions yet
+            print(f"Address {address} found, but no transactions.") # Debugging
+            result = {
+                "address": address,
+                "total_received_sats": 0,
+                "total_sent_sats": 0,
+                "total_received_btc": 0.0,
+                "total_sent_btc": 0.0,
+                "balance_sats": 0,
+                "balance_btc": 0.0,
+                "tx_count": 0,
+                "transactions": [],
             }
+            # Optional: Cache this empty result
+            # redis_service.set(cache_key, json.dumps(result))
+            return result
 
-            # Check inputs (sending)
-            for vin in tx.get("vin", []):
-                prevout = vin.get("prevout", {})
-                if prevout.get("scriptpubkey_address") == address:
-                    amount = prevout.get("value", 0)
-                    sent_in_tx += amount
+        all_address_txs.extend(current_page_txs)
+        print(f"Fetched {len(current_page_txs)} transactions on initial page.") # Debugging
 
-            # Check outputs (receiving)
-            for vout in tx.get("vout", []):
-                if vout.get("scriptpubkey_address") == address:
-                    amount = vout.get("value", 0)
-                    received_in_tx += amount
 
-            # Add to totals
-            total_received += received_in_tx
-            total_sent += sent_in_tx
+        # Find the last confirmed transaction in the initial page
+        # Iterate backwards to find the one earliest in time within this batch
+        found_last_confirmed = False
+        for tx in reversed(current_page_txs):
+            if tx.get("status", {}).get("confirmed"):
+                last_confirmed_txid = tx["txid"]
+                found_last_confirmed = True
+                break # Found the last confirmed one on this page
 
-            # Add transaction info for debugging
-            tx_detail["received"] = received_in_tx
-            tx_detail["sent"] = sent_in_tx
-            transactions.append(tx_detail)
+        if not found_last_confirmed:
+             print("No confirmed transactions in the initial page. Stopping pagination.") # Debugging
+             has_more_confirmed_txs = False
 
-        btc_received = await sats_to_btc(total_received)
-        btc_sent = await sats_to_btc(total_sent)
 
-        result = {
-            "address": address,
-            "total_received_sats": total_received,
-            "total_sent_sats": total_sent,
-            "total_received_btc": btc_received,
-            "total_sent_btc": btc_sent,
-            "balance_sats": total_received - total_sent,
-            "balance_btc": (total_received - total_sent) / 100000000,
-            "tx_count": len(transactions),
-            "transactions": transactions[:5],
-        }
-
-        redis_service.set(cache_key, json.dumps(result))
-
-        return result
-
+    except HTTPException as http_err:
+         if http_err.status_code == 404:
+              print(f"Address {address} not found by Mempool API.") # Debugging
+              raise HTTPException(status_code=404, detail=f"Address {address} not found.")
+         else:
+              print(f"HTTP error fetching initial page: {http_err}") # Debugging
+              raise http_err
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error fetching initial page: {e}") # Debugging
+        raise HTTPException(status_code=500, detail=f"Error fetching initial transactions: {e}")
 
+
+    # --- Fetch Subsequent Confirmed Transaction Pages ---
+    # Continue fetching only if we found at least one confirmed tx in the initial page
+    while has_more_confirmed_txs and last_confirmed_txid:
+        page_count += 1 # Debugging
+        url = f"api/address/{address}/txs?after_txid={last_confirmed_txid}"
+        print(f"Fetching page {page_count} from Mempool API: {url}") # Debugging
+
+        try:
+            current_page_txs = await mempool_api_call(url)
+
+            if not current_page_txs:
+                # API returned empty list, no more confirmed transactions
+                print(f"Mempool API returned empty list on page {page_count} for after_txid={last_confirmed_txid}. Stopping pagination.") # Debugging
+                has_more_confirmed_txs = False
+                break # End pagination loop
+
+            # Extend the main list with transactions from the current page
+            all_address_txs.extend(current_page_txs)
+            print(f"Fetched {len(current_page_txs)} transactions on page {page_count}.") # Debugging
+
+
+            # Update last_confirmed_txid for the next iteration
+            # In paginated calls with after_txid, the response should only contain
+            # confirmed transactions after the specified txid. So, the last tx in
+            # the returned list should be the one earliest in time in this page.
+            last_confirmed_txid = current_page_txs[-1]["txid"]
+            print(f"Updated last_confirmed_txid for next page: {last_confirmed_txid}") # Debugging
+
+
+            # Optional: Add a safeguard against excessive requests or infinite loops
+            # if page_count > 100 or len(all_address_txs) > 10000: # Adjust limits as needed
+            #     print(f"Pagination stopping due to reaching limit (Page: {page_count}, Total Txs: {len(all_address_txs)})") # Debugging
+            #     has_more_confirmed_txs = False
+            #     break
+
+        except Exception as e:
+            print(f"Error fetching paginated page {page_count} with after_txid={last_confirmed_txid}: {e}") # Debugging
+            # Decide how to handle errors during pagination - continue or stop?
+            # For now, stop pagination on error
+            has_more_confirmed_txs = False
+            # Optionally raise the exception
+            # raise HTTPException(status_code=500, detail=f"Error during pagination: {e}")
+
+
+    print(f"Finished fetching transactions. Total transactions found: {len(all_address_txs)}") # Debugging
+
+
+    # --- Process All Fetched Transactions ---
+    total_received = 0
+    total_sent = 0
+    # The all_address_txs list already contains the full transaction objects
+    # including vin, vout, fee, size, and status.
+    # We just need to iterate through this complete list to calculate totals
+    # from the perspective of the target address.
+
+    # We don't need to rebuild a separate 'transactions' list for the response
+    # as the all_address_txs list already has the structure needed by the frontend.
+    # We also don't need seen_txids if the API and pagination are correct.
+
+    for tx in all_address_txs:
+        received_in_tx = 0
+        sent_in_tx = 0
+
+        # Check inputs (sending)
+        for vin in tx.get("vin", []):
+            prevout = vin.get("prevout", {})
+            if prevout.get("scriptpubkey_address") == address:
+                amount = prevout.get("value", 0)
+                sent_in_tx += amount
+
+        # Check outputs (receiving)
+        for vout in tx.get("vout", []):
+            if vout.get("scriptpubkey_address") == address:
+                amount = vout.get("value", 0)
+                received_in_tx += amount
+
+        # Add to totals
+        total_received += received_in_tx
+        total_sent += sent_in_tx
+
+
+    btc_received = await sats_to_btc(total_received)
+    btc_sent = await sats_to_btc(total_sent)
+
+    result = {
+        "address": address,
+        "total_received_sats": total_received,
+        "total_sent_sats": total_sent,
+        "total_received_btc": btc_received,
+        "total_sent_btc": btc_sent,
+        "balance_sats": total_received - total_sent,
+        "balance_btc": (total_received - total_sent) / 100000000,
+        "tx_count": len(all_address_txs), # Count based on the full list from pagination
+        "transactions": all_address_txs, # <--- Pass the full list fetched
+    }
+
+    try:
+        redis_service.set(cache_key, json.dumps(result))
+    except Exception as cache_err:
+        print(f"Cache setting error for {address}: {cache_err}")
+
+    print(f"Returning result for {address} with {result['tx_count']} transactions.") # Debugging
+    return result
 
 @router.get("/address/wallet", response_model=dict)
 async def get_basic_wallet_info(

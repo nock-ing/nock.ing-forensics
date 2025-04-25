@@ -3,7 +3,7 @@ import {Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Table
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
 import {ScrollArea} from "@/components/ui/scroll-area";
-import {WalletTxData} from "@/types/wallet.types";
+import {WalletData} from "@/types/wallet.types";
 import {Copy, ExternalLink, FileDown} from "lucide-react";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip";
 import Link from "next/link";
@@ -21,7 +21,7 @@ import {HistoricalPrice} from "@/types/historicalPrice.types";
 
 
 interface WalletTransactionsDisplayProps {
-    data: WalletTxData;
+    data: WalletData;
 }
 
 export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps) {
@@ -29,7 +29,7 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
         data?.transactions[0]?.status?.block_time?.toString()
     );
     const {priceData} = useHistoricalPrices(selectedTxTimestamp);
-    const {coinAgeData, isLoading: coinAgeLoading} = useCoinAge(data?.address);
+    const {coinAgeData, isLoading: coinAgeLoading} = useCoinAge(data?.address.toString());
     const currentPrice = useCurrentPrice();
     const blockToTimestampMap = React.useMemo(() => {
         const map: Record<number, number> = {};
@@ -212,7 +212,7 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                                         <TableCell className="text-right">{tx.fee}</TableCell>
                                         <TableCell className="text-right">{tx.size} bytes</TableCell>
                                         <TableCell className="text-right">
-                                            {satoshisToBTC(getWalletAmount(tx, data.address))}
+                                            {satoshisToBTC(getWalletAmount(tx, data.address.toString()))}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             {selectedTxTimestamp === txTimestamp && priceData ? (

@@ -1,5 +1,5 @@
 "use client";
-import type {WalletData, WalletTxData} from "@/types/wallet.types";
+import type {WalletData} from "@/types/wallet.types";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Skeleton} from "@/components/ui/skeleton";
 import {Alert, AlertDescription} from "@/components/ui/alert";
@@ -20,7 +20,7 @@ type WalletInfoProps = {
     walletData: WalletData;
     walletLoading: boolean;
     walletError: string | null;
-    walletTransactions?: WalletTxData;
+    walletTransactions?: WalletData;
 };
 
 export default function WalletInfo({
@@ -266,11 +266,25 @@ export default function WalletInfo({
                     <Card className="col-span-1">
                         <CardContent className="h-96">
                             {!walletLoading && !walletError && walletData && (
-                                <WalletGraph
-                                    walletData={walletData}
-                                    relatedWallets={relatedWallets}
-                                    onNodeClick={handleWalletClick}
-                                />
+                                relatedWallets.size > 25 ? (
+                                    <div
+                                        className="h-full flex items-center justify-center flex-col gap-4 p-6 text-center">
+                                        <AlertCircle className="h-12 w-12 text-yellow-500"/>
+                                        <h3 className="text-lg font-medium">Large number of connections detected</h3>
+                                        <p className="text-muted-foreground">
+                                            This wallet has {relatedWallets.size} connected wallets, which is too many
+                                            to display in a graph.
+                                            Please refer to the wallet list on the right for all connected addresses.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <WalletGraph
+                                        walletData={walletData}
+                                        relatedWallets={relatedWallets}
+                                        onNodeClick={handleWalletClick}
+                                    />
+                                )
+
                             )}
                             {walletLoading && (
                                 <div className="h-full flex items-center justify-center">
