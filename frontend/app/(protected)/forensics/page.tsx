@@ -38,7 +38,6 @@ export default function ForensicsPage() {
 
     const {
         walletData,
-        walletTransactions,
         loading: walletLoading,
         error: walletError,
         fetchWalletInsights,
@@ -68,7 +67,6 @@ export default function ForensicsPage() {
     }
 
 
-    console.log(walletTransactions?.transactions)
     return (
         <div className="p-4 space-y-6 w-full">
             <h1 className="text-2xl font-bold mb-4">Forensic Analysis</h1>
@@ -136,25 +134,24 @@ export default function ForensicsPage() {
                 </>
             )}
 
-            {!isTxid && walletData && walletTransactions && (
+            {!isTxid && walletData && (
                 <>
                     <div>
                         <WalletInfo walletData={walletData} walletError={walletError} walletLoading={walletLoading}
-                                    walletTransactions={walletTransactions}/>
+                                    walletTransactions={walletData}/>
                     </div>
                     <div className={"px-6"}>
                         <WalletActivityHeatmap
-                            transactions={walletTransactions?.transactions?.map(tx => ({
+                            transactions={walletData?.transactions?.map((tx) => ({
                                 ...tx,
                                 // Make sure each transaction has a timestamp property in ISO format
-                                // Adjust this based on your actual data structure
-                                timestamp: tx.status.block_time ? new Date(tx.status.block_time * 1000).toISOString() : new Date().toISOString()
+                                timestamp: tx.status?.block_time ? new Date(tx.status.block_time * 1000).toISOString() : new Date().toISOString()
                             })) || []}
                             className="mt-6"
                         />
                     </div>
                     <div>
-                        <WalletTransactionsDisplay data={walletTransactions}/>
+                        <WalletTransactionsDisplay data={walletData}/>
                     </div>
                 </>
             )}

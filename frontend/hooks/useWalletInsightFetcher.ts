@@ -1,10 +1,9 @@
 import { getCookie } from "cookies-next";
 import { useState, useCallback } from "react";
-import type {WalletData, WalletTxData} from "@/types/wallet.types";
+import type {WalletData} from "@/types/wallet.types";
 
 export function useWalletInsightFetcher(input: string, isTxid: boolean) {
     const [walletData, setWalletData] = useState<WalletData | null>(null);
-    const [walletTransactions, setWalletTransactions] = useState<WalletTxData>();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -27,27 +26,22 @@ export function useWalletInsightFetcher(input: string, isTxid: boolean) {
                             headers: { Authorization: `Bearer ${token}` },
                         });
 
-                        if (!walletResponse.ok) throw new Error("Failed to fetch wallet data");
+                        if (!walletResponse.ok) {
+                            const errorData = await walletResponse.json();
+                            throw new Error(errorData.detail || "Failed to fetch wallet data");
+                        }
 
                         const data = await walletResponse.json();
+                        // This log confirmed 145 data for the wallet TYPE, which is not the issue
+                        // console.log("useWalletInsightFetcher - wallet type data:", data);
+
                         setWalletData(data);
                         break;
 
-                    case "wallettx":
-                        const walletTxResponse = await fetch(`/api/wallet-tx?address=${input}`, {
-                            headers: { Authorization: `Bearer ${token}` },
-                        });
 
-                        if (!walletTxResponse.ok) throw new Error("Failed to fetch wallet transactions");
-
-                        const txData = await walletTxResponse.json();
-                        setWalletTransactions(txData);
-                        break;
-
-                    default:
-                        throw new Error("Invalid fetch type");
                 }
             } catch (err) {
+                console.error("Error in useWalletInsightFetcher:", err); // Log the error
                 setError(err instanceof Error ? err.message : "An error occurred");
             } finally {
                 setLoading(false);
@@ -58,7 +52,6 @@ export function useWalletInsightFetcher(input: string, isTxid: boolean) {
 
     return {
         walletData,
-        walletTransactions,
         loading,
         error,
         fetchWalletInsights,

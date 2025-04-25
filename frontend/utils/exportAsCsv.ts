@@ -3,10 +3,10 @@ import {getWalletAmount} from "@/utils/transactionValueFetcher";
 import {CurrentPrice} from "@/types/currentPrice.types";
 import {CoinAgeResponse} from "@/types/coinAgeData.types";
 import {HistoricalPrice} from "@/types/historicalPrice.types";
-import {WalletTxData} from "@/types/wallet.types";
+import {WalletData} from "@/types/wallet.types";
 
 export const exportToCSV = (
-    data: WalletTxData,
+    data: WalletData,
     priceData?: HistoricalPrice | undefined,
     coinAgeData?: CoinAgeResponse | null,
     currentPrice?: CurrentPrice | undefined,
@@ -36,7 +36,7 @@ export const exportToCSV = (
     // Format transactions data into rows
     const rows = data.transactions.map(tx => {
         const timestamp = tx.status?.block_time?.toString();
-        const btcAmount = satoshisToBTC(getWalletAmount(tx, data.address)) || 0;
+        const btcAmount = satoshisToBTC(getWalletAmount(tx, data.address.toString())) || 0;
 
         // Initialize heldFor for THIS transaction (move it inside the map function)
         let heldFor = '';

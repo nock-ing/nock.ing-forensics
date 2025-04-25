@@ -9,6 +9,7 @@ export type WalletData = {
     balance_sats: number;
     balance_btc: number;
     tx_count: number;
+    transactions: Transaction[];
 }
 
 type ScriptPubKey = {
