@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {useUser} from "@/hooks/use-user";
 import Link from "next/link";
+import { RecentSearchSidebar } from "@/components/RecentSearches/RecentSearchSidebar";
+import { FlaggedItemsSidebar } from "@/components/FlaggedItems";
 
 export function AppSidebar() {
     const { user, loading, error, signOut } = useUser();
@@ -70,6 +72,8 @@ export function AppSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+                <FlaggedItemsSidebar />
+                <RecentSearchSidebar />
             </SidebarContent>
             <SidebarFooter>
                 <SidebarMenu>
