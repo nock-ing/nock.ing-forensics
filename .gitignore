@@ -44,3 +44,6 @@ __pycache__
 .idea
 
 backend/data
+backend/lib
+backend/bin
+backend/include

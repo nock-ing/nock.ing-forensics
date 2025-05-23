@@ -8,7 +8,7 @@ export default function Page() {
 
     return (
         <div className="h-screen">
-            <RelatedTxReactFlow transactionId={search}/>
+            <RelatedTxReactFlow transactionId={search} zoomFactor={0.6}/>
         </div>
     );
 }

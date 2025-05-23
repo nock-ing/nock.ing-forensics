@@ -50,7 +50,19 @@ export const exportToCSV = (
 
         // Find matching coin age detail to calculate gains if available
         const coinAgeDetail = coinAgeData?.coin_age_details?.find(detail => detail.txid === tx.txid);
-        const gains = '';
+        let gains = '';
+        
+        // Calculate gains if we have both historical and current price data
+        if (coinAgeDetail && priceData?.prices?.[0]?.USD && currentPrice?.USD) {
+            const receivedPrice = priceData.prices[0].USD;
+            const spentPrice = currentPrice.USD;
+            const btcAmountNum = Number(btcAmount);
+            
+            if (!isNaN(btcAmountNum)) {
+                const priceDifferencePerBTC = spentPrice - receivedPrice;
+                gains = (btcAmountNum * priceDifferencePerBTC).toFixed(2);
+            }
+        }
 
 
         if (coinAgeDetail) {
@@ -84,7 +96,7 @@ export const exportToCSV = (
             tx.fee,
             tx.size,
             btcAmount,
-            price ? price.toFixed(2) : '',
+            price ? price.toFixed(2) : '0',
             valueUSD,
             heldFor,
             gains
@@ -93,7 +105,8 @@ export const exportToCSV = (
 
 
     // Combine headers and rows
-    const csvContent = [headers.join(','), ...rows].join('\n');
+    // Add BOM for Excel compatibility and ensure proper line endings
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
 
     // Create a blob and download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

@@ -4,6 +4,7 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends
 import jwt
+from typing import Union
 
 from app.config.config import settings
 from app.utils.redis_service import get_redis_service, RedisService
@@ -21,7 +22,7 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
     redis_service = get_redis_service()
     jti = str(uuid.uuid4())
     to_encode = data.copy()

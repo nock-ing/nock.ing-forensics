@@ -1,10 +1,11 @@
 from sqlmodel import SQLModel
+from typing import Union, Optional
 
 
 class UserBase(SQLModel):
-    id: int | None = None
+    id: Optional[int] = None
     username: str
-    email: str | None = None
+    email: Optional[str] = None
 
 
 class UserCreate(UserBase, SQLModel):
