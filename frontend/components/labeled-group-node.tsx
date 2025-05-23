@@ -9,10 +9,10 @@ export function LabeledGroupNode({ data, selected }: NodeProps<LabeledGroupNode>
   return (
     <BaseNode
       selected={selected}
-      className="bg-white bg-opacity-50 h-full rounded-sm overflow-hidden p-0" 
+      className="bg-background/30 h-full rounded-lg overflow-hidden p-0 border border-border/50 backdrop-blur-sm" 
     >
       {data.label && (
-        <div className="bg-gray-200 w-fit p-2 text-xs rounded-br-sm bg-secondary text-card-foreground" >
+        <div className="bg-muted/80 w-fit p-2 text-xs rounded-br-lg text-muted-foreground backdrop-blur-sm" >
           {data.label}
         </div>
       )}

@@ -9,6 +9,8 @@ import {
     Background,
     EdgeChange,
     NodeChange,
+    Node,
+    Edge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -16,11 +18,28 @@ import {AnimatedSvgEdge} from '@/components/animated-svg-edge';
 import {ZoomSlider} from '@/components/zoom-slider';
 import {formatAddress} from '@/utils/formatters';
 import {LabeledGroupNode} from '@/components/labeled-group-node';
+import { TransactionDetailsPanel } from '@/components/TransactionDetailsPanel/TransactionDetailsPanel';
+import { useRouter } from 'next/navigation';
+
+interface CustomNodeData {
+    label: string;
+    timestamp?: number;
+    amount?: number;
+    priceAtTime?: number;
+    [key: string]: unknown;
+}
 
 type RelatedTxData = {
     id: string;
     data: {
         label: string;
+        vout?: {
+            scriptpubkey_address?: string;
+            value: number;
+        }[];
+        timestamp?: number;
+        amount?: number;
+        priceAtTime?: number;
     };
     position: {
         x: number;
@@ -30,7 +49,12 @@ type RelatedTxData = {
         string,
         {
             id: string;
-            data: { label: string };
+            data: { 
+                label: string;
+                timestamp?: number;
+                amount?: number;
+                priceAtTime?: number;
+            };
             position: { x: number; y: number };
         }
     >;
@@ -38,12 +62,17 @@ type RelatedTxData = {
 
 interface TransactionFlowProps {
     transactionId: string | null;
+    zoomFactor: number;
 }
 
-export function RelatedTxReactFlow({transactionId}: TransactionFlowProps) {
+export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionFlowProps) {
+    const router = useRouter();
     const [relatedTxData, setRelatedTxData] = useState<RelatedTxData>();
-    const [nodes, setNodes] = useNodesState([]);
-    const [edges, setEdges] = useEdgesState([]);
+    const [nodes, setNodes] = useNodesState<Node<CustomNodeData>>([]);
+    const [edges, setEdges] = useEdgesState<Edge>([]);
+    const [selectedNode, setSelectedNode] = useState<Node<CustomNodeData> | null>(null);
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const nodeTypes = {
         group: LabeledGroupNode,
@@ -55,101 +84,196 @@ export function RelatedTxReactFlow({transactionId}: TransactionFlowProps) {
 
     useEffect(() => {
         async function fetchRelatedTx() {
-            if (!transactionId) return;
-            const response = await fetch(`/api/redis-related-tx?txid=${transactionId}`);
-            const data = await response.json();
-            setRelatedTxData(data);
+            if (!transactionId) {
+                setLoading(false);
+                return;
+            }
+            
+            try {
+                setLoading(true);
+                const response = await fetch(`/api/redis-related-tx?txid=${transactionId}`);
+                const data = await response.json();
+                setRelatedTxData(data);
+            } catch (error) {
+                console.error("Error fetching related transactions:", error);
+            } finally {
+                setLoading(false);
+            }
         }
 
         fetchRelatedTx();
     }, [transactionId]);
 
+    const handleNodeClick = useCallback((event: React.MouseEvent, node: Node<CustomNodeData>) => {
+        setSelectedNode(node);
+        setIsPanelOpen(true);
+    }, []);
+
+    const handleViewDetails = useCallback((txid: string) => {
+        router.push(`/transaction/${txid}`);
+    }, [router]);
+
+    const handleSaveTransaction = useCallback((txid: string) => {
+        // TODO: Implement save transaction functionality
+        console.log('Saving transaction:', txid);
+    }, []);
+
     useEffect(() => {
         if (!relatedTxData) return;
-        const groupNode = {
-            id: 'input-group',
-            type: 'group',
-            position: {x: 0, y: 0},
-            data: {label: 'Input Group'},
+
+        // Layout constants
+        const inputX = 0;
+        const mainX = 350;
+        const outputX = 700;
+        const ySpacing = 120;
+        const nodeWidth = 220;
+
+        // Input nodes (these are the related transactions)
+        const inputNodes: Node<CustomNodeData>[] = Object.values(relatedTxData.related_txids).map((txObj, i) => ({
+            id: `input-${txObj.id}`,
+            data: { 
+                label: formatAddress(txObj.data.label),
+                timestamp: txObj.data.timestamp,
+                amount: txObj.data.amount,
+                priceAtTime: txObj.data.priceAtTime,
+            },
+            position: { x: inputX, y: i * ySpacing },
+            type: 'default',
+            zIndex: 1,
             style: {
-                width: 500,
-                height: 500,
-            },
-            zIndex: 0,
-        };
+                background: 'var(--card)',
+                color: 'var(--card-foreground)',
+                border: '2px solid #F7931A',
+                borderRadius: '12px',
+                padding: '16px',
+                width: `${nodeWidth}px`,
+                textAlign: 'center',
+                boxShadow: '0 4px 16px 0 #F7931A22, 0 1.5px 0 0 #fff2',
+                backdropFilter: 'blur(8px)',
+                transition: 'box-shadow 0.2s, border 0.2s',
+                cursor: 'pointer',
+            }
+        }));
 
-        const relatedNodes = Object.values(relatedTxData.related_txids).map(
-            (txObj, i) => ({
-                id: txObj.id,
-                data: {label: formatAddress(txObj.data.label)},
-                position: {x: 50, y: 50 + i * 100}, // local to parent
-                type: 'default',
-                parentNode: 'input-group',
-                extent: 'parent',
-                zIndex: 1,
-            })
-        );
-
-        const mainNode = {
-            id: 'test',
-            data: {
-                label: 'Input Transaction',
+        // Main transaction node (centered vertically)
+        const mainNodeY = (inputNodes.length > 0 ? (inputNodes.length - 1) * ySpacing / 2 : 0);
+        const mainNode: Node<CustomNodeData> = {
+            id: 'main-tx',
+            data: { 
+                label: formatAddress(relatedTxData.data.label),
+                timestamp: relatedTxData.data.timestamp,
+                amount: relatedTxData.data.amount,
+                priceAtTime: relatedTxData.data.priceAtTime,
             },
-            position: {x: Math.random() * 400, y: Math.random() * 400},
+            position: { x: mainX, y: mainNodeY },
             type: 'default',
             zIndex: 2,
+            style: {
+                background: 'var(--card)',
+                color: 'var(--card-foreground)',
+                border: '2px solid #F7931A',
+                borderRadius: '12px',
+                padding: '16px',
+                width: `${nodeWidth}px`,
+                textAlign: 'center',
+                boxShadow: '0 4px 16px 0 #F7931A22, 0 1.5px 0 0 #fff2',
+                backdropFilter: 'blur(8px)',
+                transition: 'box-shadow 0.2s, border 0.2s',
+                cursor: 'pointer',
+            }
         };
 
-        const newNodes = [groupNode, ...relatedNodes, mainNode];
+        // Edges: inputs -> main
+        const inputEdges: Edge[] = inputNodes.map(node => ({
+            id: `${node.id}-main`,
+            source: node.id,
+            target: 'main-tx',
+            type: 'animatedSvgEdge',
+            data: {
+                duration: 2,
+                shape: 'bitcoin',
+                path: 'smoothstep',
+            },
+            style: {
+                stroke: '#F7931A',
+                strokeWidth: 2,
+            },
+            animated: true,
+            zIndex: 0,
+        }));
 
-        // Build edges using the custom 'animatedSvgEdge' type
-        const newEdges = Object.values(relatedTxData.related_txids).map(
-            (txObj) => ({
-                id: `${txObj.id}-${mainNode.id}`,
-                source: txObj.id,
-                target: mainNode.id,
-                type: 'animatedSvgEdge',
-                // Pass any props you want to the AnimatedSvgEdge via 'data'
-                data: {
-                    duration: 2, // how fast the animation flows
-                    shape: 'package', // dot shape, "package" is from the example
-                    path: 'straight',
-                },
-            })
-        );
+        const newNodes = [...inputNodes, mainNode];
+        const newEdges = [...inputEdges];
 
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
         setNodes(newNodes);
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
         setEdges(newEdges);
     }, [relatedTxData, setNodes, setEdges]);
 
     const handleNodesChange = useCallback(
-        (changes: NodeChange<never>[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
+        (changes: NodeChange<Node<CustomNodeData>>[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
         [setNodes]
     );
 
     const handleEdgesChange = useCallback(
-        (changes: EdgeChange<never>[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+        (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
         [setEdges]
     );
+
+    // Helper function to get transaction data from node
+    const getTransactionData = useCallback((node: Node<CustomNodeData>) => {
+        if (!node || !transactionId) return null;
+        
+        const txid = node.id === 'main-tx' ? transactionId : node.id.replace('input-', '');
+        return {
+            txid,
+            amount: node.data.amount || 0,
+            timestamp: node.data.timestamp || 0,
+            priceAtTime: node.data.priceAtTime,
+        };
+    }, [transactionId]);
+
+    // Handle empty state with just the framework while loading or no data
+    if (loading || !relatedTxData) {
+        return (
+            <div className="h-full w-full">
+                <ReactFlow
+                    nodes={[]}
+                    edges={[]}
+                    nodeTypes={nodeTypes}
+                    edgeTypes={edgeTypes}
+                    defaultViewport={{ x: 0, y: 0, zoom: zoomFactor }}
+                >
+                    <Background />
+                    <ZoomSlider />
+                </ReactFlow>
+            </div>
+        );
+    }
 
     return (
         <div className="h-full w-full">
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
-                onNodesChange={handleNodesChange}
-                onEdgesChange={handleEdgesChange}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
+                onNodesChange={handleNodesChange}
+                onEdgesChange={handleEdgesChange}
+                onNodeClick={handleNodeClick}
                 fitView
+                defaultViewport={{ x: 0, y: 0, zoom: zoomFactor }}
             >
-                <Background/>
-                <ZoomSlider/>
+                <Background />
+                <ZoomSlider />
             </ReactFlow>
+            
+            <TransactionDetailsPanel
+                isOpen={isPanelOpen}
+                onClose={() => setIsPanelOpen(false)}
+                transaction={selectedNode ? getTransactionData(selectedNode) : null}
+                onViewDetails={handleViewDetails}
+                onSaveTransaction={handleSaveTransaction}
+            />
         </div>
     );
 }

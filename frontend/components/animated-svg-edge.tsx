@@ -6,6 +6,7 @@ import {
   getStraightPath,
   getSmoothStepPath,
 } from "@xyflow/react";
+import BitcoinLogo from '@/public/bitcoin-btc-logo.svg';
 
 export type AnimatedSvgEdge = Edge<{
   /**
@@ -118,6 +119,17 @@ const shapes = {
       <path d="M12 22V12" />
       <path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" />
       <path d="m7.5 4.27 9 5.15" />
+      <animateMotion {...animateMotionProps} />
+    </g>
+  ),
+
+  bitcoin: ({ animateMotionProps }) => (
+    <g transform="translate(-12,-12)">
+      <image
+        href={BitcoinLogo.src}
+        width="24"
+        height="24"
+      />
       <animateMotion {...animateMotionProps} />
     </g>
   ),
