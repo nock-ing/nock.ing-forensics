@@ -6,6 +6,12 @@ services:
     env_file: .env        # Coolify → Environment Group
     expose:
       - "8080"
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.backend.loadbalancer.server.port=8080
+      - traefik.http.routers.backend.rule=Host(`nock.ing`) && PathPrefix(`/`)
+      - traefik.http.routers.backend.entryPoints=https
+      - traefik.http.routers.backend.tls=true
     depends_on:
       - psql
     restart: unless-stopped
