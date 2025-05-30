@@ -24,8 +24,8 @@ services:
       - BITCOIN_RPC_WALLET=${BITCOIN_RPC_WALLET}
     depends_on:
       - psql-dev
-    ports:
-      - 80:80
+#    ports:
+#      - 80:80
     volumes:
       - .:/code
     extra_hosts:
