@@ -25,7 +25,7 @@ services:
     depends_on:
       - psql-dev
     ports:
-      - 8080:8080
+      - 80:80
     volumes:
       - .:/code
     extra_hosts:
