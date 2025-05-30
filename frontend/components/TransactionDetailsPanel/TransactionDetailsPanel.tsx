@@ -2,28 +2,30 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { formatDistanceToNow } from 'date-fns';
+import { useTransactionStore } from '@/store/useTransactionStore';
 
 interface TransactionDetailsPanelProps {
-    isOpen: boolean;
-    onClose: () => void;
-    transaction: {
-        txid: string;
-        amount: number;
-        timestamp: number;
-        priceAtTime?: number;
-    } | null;
     onViewDetails: (txid: string) => void;
     onSaveTransaction: (txid: string) => void;
 }
 
 export function TransactionDetailsPanel({
-    isOpen,
-    onClose,
-    transaction,
     onViewDetails,
     onSaveTransaction,
 }: TransactionDetailsPanelProps) {
-    if (!isOpen || !transaction) return null;
+    // Use the Zustand store
+    const { 
+        isPanelOpen, 
+        closePanel, 
+        selectedNode, 
+        getTransactionData 
+    } = useTransactionStore();
+
+    // Get transaction data from the selected node
+    const transaction = selectedNode ? getTransactionData(selectedNode) : null;
+
+    // Early return if panel is closed or no transaction is selected
+    if (!isPanelOpen || !transaction) return null;
 
     const formattedAmount = (transaction.amount / 100000000).toFixed(8); // Convert satoshis to BTC
     const formattedTime = formatDistanceToNow(new Date(transaction.timestamp * 1000), { addSuffix: true });
@@ -38,7 +40,7 @@ export function TransactionDetailsPanel({
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={onClose}
+                    onClick={closePanel}
                     className="hover:bg-transparent"
                 >
                     <X className="h-5 w-5" />

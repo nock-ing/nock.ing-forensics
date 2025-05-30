@@ -1,7 +1,8 @@
 import redis
+from app.config.config import settings
 
 # Initialize Redis Connection
-pool = redis.ConnectionPool(host="localhost", port=16379, db=0)
+pool = redis.ConnectionPool(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=0)
 r = redis.Redis(connection_pool=pool)
 
 try:

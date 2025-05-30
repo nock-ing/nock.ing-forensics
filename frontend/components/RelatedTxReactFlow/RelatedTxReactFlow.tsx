@@ -1,14 +1,8 @@
 'use client';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect} from 'react';
 import {
     ReactFlow,
-    useNodesState,
-    useEdgesState,
-    applyNodeChanges,
-    applyEdgeChanges,
     Background,
-    EdgeChange,
-    NodeChange,
     Node,
     Edge,
 } from '@xyflow/react';
@@ -20,59 +14,32 @@ import {formatAddress} from '@/utils/formatters';
 import {LabeledGroupNode} from '@/components/labeled-group-node';
 import { TransactionDetailsPanel } from '@/components/TransactionDetailsPanel/TransactionDetailsPanel';
 import { useRouter } from 'next/navigation';
-
-interface CustomNodeData {
-    label: string;
-    timestamp?: number;
-    amount?: number;
-    priceAtTime?: number;
-    [key: string]: unknown;
-}
-
-type RelatedTxData = {
-    id: string;
-    data: {
-        label: string;
-        vout?: {
-            scriptpubkey_address?: string;
-            value: number;
-        }[];
-        timestamp?: number;
-        amount?: number;
-        priceAtTime?: number;
-    };
-    position: {
-        x: number;
-        y: number;
-    };
-    related_txids: Record<
-        string,
-        {
-            id: string;
-            data: { 
-                label: string;
-                timestamp?: number;
-                amount?: number;
-                priceAtTime?: number;
-            };
-            position: { x: number; y: number };
-        }
-    >;
-};
-
-interface TransactionFlowProps {
-    transactionId: string | null;
-    zoomFactor: number;
-}
+import { useTransactionStore } from '@/store/useTransactionStore';
+import {CustomNodeData, TransactionFlowProps} from "@/types/relatedTx.types";
 
 export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionFlowProps) {
     const router = useRouter();
-    const [relatedTxData, setRelatedTxData] = useState<RelatedTxData>();
-    const [nodes, setNodes] = useNodesState<Node<CustomNodeData>>([]);
-    const [edges, setEdges] = useEdgesState<Edge>([]);
-    const [selectedNode, setSelectedNode] = useState<Node<CustomNodeData> | null>(null);
-    const [isPanelOpen, setIsPanelOpen] = useState(false);
-    const [loading, setLoading] = useState(true);
+
+    // Use the Zustand store instead of local state
+    const {
+        relatedTxData,
+        nodes,
+        edges,
+        loading,
+        setTransactionId,
+        setNodes,
+        setEdges,
+        selectNode,
+        openPanel,
+        onNodesChange,
+        onEdgesChange,
+        fetchRelatedTx
+    } = useTransactionStore();
+
+    // Set the transaction ID in the store
+    useEffect(() => {
+        setTransactionId(transactionId);
+    }, [transactionId, setTransactionId]);
 
     const nodeTypes = {
         group: LabeledGroupNode,
@@ -82,32 +49,17 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionF
         animatedSvgEdge: AnimatedSvgEdge,
     };
 
+    // Fetch related transaction data when transaction ID changes
     useEffect(() => {
-        async function fetchRelatedTx() {
-            if (!transactionId) {
-                setLoading(false);
-                return;
-            }
-            
-            try {
-                setLoading(true);
-                const response = await fetch(`/api/redis-related-tx?txid=${transactionId}`);
-                const data = await response.json();
-                setRelatedTxData(data);
-            } catch (error) {
-                console.error("Error fetching related transactions:", error);
-            } finally {
-                setLoading(false);
-            }
+        if (transactionId) {
+            fetchRelatedTx(transactionId);
         }
-
-        fetchRelatedTx();
-    }, [transactionId]);
+    }, [transactionId, fetchRelatedTx]);
 
     const handleNodeClick = useCallback((event: React.MouseEvent, node: Node<CustomNodeData>) => {
-        setSelectedNode(node);
-        setIsPanelOpen(true);
-    }, []);
+        selectNode(node);
+        openPanel();
+    }, [selectNode, openPanel]);
 
     const handleViewDetails = useCallback((txid: string) => {
         router.push(`/transaction/${txid}`);
@@ -124,7 +76,6 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionF
         // Layout constants
         const inputX = 0;
         const mainX = 350;
-        const outputX = 700;
         const ySpacing = 120;
         const nodeWidth = 220;
 
@@ -209,28 +160,8 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionF
         setEdges(newEdges);
     }, [relatedTxData, setNodes, setEdges]);
 
-    const handleNodesChange = useCallback(
-        (changes: NodeChange<Node<CustomNodeData>>[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
-        [setNodes]
-    );
-
-    const handleEdgesChange = useCallback(
-        (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-        [setEdges]
-    );
-
-    // Helper function to get transaction data from node
-    const getTransactionData = useCallback((node: Node<CustomNodeData>) => {
-        if (!node || !transactionId) return null;
-        
-        const txid = node.id === 'main-tx' ? transactionId : node.id.replace('input-', '');
-        return {
-            txid,
-            amount: node.data.amount || 0,
-            timestamp: node.data.timestamp || 0,
-            priceAtTime: node.data.priceAtTime,
-        };
-    }, [transactionId]);
+    // We're using the store's onNodesChange and onEdgesChange directly
+    // No need for local implementations
 
     // Handle empty state with just the framework while loading or no data
     if (loading || !relatedTxData) {
@@ -257,8 +188,8 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionF
                 edges={edges}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
-                onNodesChange={handleNodesChange}
-                onEdgesChange={handleEdgesChange}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
                 onNodeClick={handleNodeClick}
                 fitView
                 defaultViewport={{ x: 0, y: 0, zoom: zoomFactor }}
@@ -266,11 +197,8 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionF
                 <Background />
                 <ZoomSlider />
             </ReactFlow>
-            
+
             <TransactionDetailsPanel
-                isOpen={isPanelOpen}
-                onClose={() => setIsPanelOpen(false)}
-                transaction={selectedNode ? getTransactionData(selectedNode) : null}
                 onViewDetails={handleViewDetails}
                 onSaveTransaction={handleSaveTransaction}
             />
