@@ -4,7 +4,7 @@ volumes:
 services:
   backend-rpc-dev:
     build:
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     environment:
       - PYTHONUNBUFFERED=1
       - PG_USER=${PG_USER}
