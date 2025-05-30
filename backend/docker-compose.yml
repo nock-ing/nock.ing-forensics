@@ -4,7 +4,8 @@ services:
   backend:
     build: .
     env_file: .env        # Coolify → Environment Group
-    ports: ["8080"]       # tells Caddy what to proxy
+    expose:
+      - "8080"
     depends_on:
       - psql
     restart: unless-stopped
