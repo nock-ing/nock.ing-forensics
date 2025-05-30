@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     UMBREL_HOST: str = Field(default=os.getenv("UMBREL_HOST", "127.0.0.1"))
     UMBREL_PORT: int = Field(default=int(os.getenv("UMBREL_PORT", 3006)))
 
+    # Redis
+    REDIS_HOST: str = Field(default=os.getenv("REDIS_HOST", "127.0.0.1"))
+    REDIS_PORT: int = Field(default=int(os.getenv("REDIS_PORT", 6379)))
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
