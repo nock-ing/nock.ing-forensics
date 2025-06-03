@@ -1,34 +1,17 @@
-FROM node:22-alpine AS base
+# Use Bun's official image
+FROM oven/bun:1.1.8
 
-FROM base AS builder
-
-RUN apk add --no-cache gcompat
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
+# Set working directory
 WORKDIR /app
 
+# Copy Bun config and source code
 COPY . .
 
-# Install and build with pnpm
-RUN pnpm install --frozen-lockfile && \
-    pnpm run build && \
-    pnpm prune --prod
+# Install dependencies using Bun
+RUN bun install --frozen-lockfile
 
-FROM base AS runner
+# Expose the port your Hono app listens on
+EXPOSE 8558
 
-# Same setup for runtime
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 hono
-
-WORKDIR /app
-
-COPY --from=builder --chown=hono:nodejs /app/node_modules /app/node_modules
-COPY --from=builder --chown=hono:nodejs /app/dist /app/dist
-COPY --from=builder --chown=hono:nodejs /app/package.json /app/package.json
-
-USER hono
-EXPOSE 3000
-
-CMD ["node", "/app/dist/index.js"]
+# Start the app
+CMD ["bun", "src/index.ts"]
