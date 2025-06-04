@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # Redis
     REDIS_HOST: str = Field(default=os.getenv("REDIS_HOST", "127.0.0.1"))
     REDIS_PORT: int = Field(default=int(os.getenv("REDIS_PORT", 6379)))
+    REDIS_URL: str = Field(default=f"redis://{REDIS_HOST}:{REDIS_PORT}")
+
+    # Environment
+    ENVIRONMENT: str = Field(default=os.getenv("ENVIRONMENT", "dev"))
 
     class Config:
         env_file = ".env"
