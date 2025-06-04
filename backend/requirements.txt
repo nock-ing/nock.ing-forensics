@@ -1,3 +1,4 @@
+
 aiodns==3.2.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.11.14
@@ -18,7 +19,7 @@ charset-normalizer==3.4.0
 click==8.1.7
 click-didyoumean==0.3.1
 click-plugins==1.1.1
-click-repl==0.3.0
+click-repl==0.3.1
 dnspython==2.7.0
 email_validator==2.2.0
 exceptiongroup==1.2.2
@@ -41,6 +42,7 @@ multidict==6.2.0
 passlib==1.7.4
 prompt_toolkit==3.0.50
 propcache==0.3.0
+psycopg==3.2.3
 psycopg2-binary==2.9.9
 pycares==4.5.0
 pycparser==2.22

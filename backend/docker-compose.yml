@@ -4,13 +4,17 @@ services:
   backend:
     build: .
     environment:
-      # Coolify will inject these from Environment Variables
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
       - SECRET_KEY=${SECRET_KEY}
-      # Add other environment variables as needed
-    expose:
-      - "8080"
+      - POSTGRES_DB=${POSTGRES_DB:-myapp}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    ports:
+      - "8080:8080"
     labels:
       - "coolify.managed=true"
       - "traefik.enable=true"
@@ -19,14 +23,17 @@ services:
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
     depends_on:
-      - psql
-      - redis
+      psql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
       interval: 30s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      start_period: 40s
+      retries: 3
 
   psql:
     image: postgres:16-alpine
@@ -36,23 +43,29 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - psql_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-myapp}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
   redis:
     image: redis/redis-stack:latest
     volumes:
       - redis_data:/data
+    ports:
+      - "6379:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
 
 volumes:
   psql_data:
