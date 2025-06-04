@@ -1,20 +1,27 @@
-FROM python:3.10
+FROM python:3.10-slim
 
 WORKDIR /code
 
 # Install system dependencies including curl for health checks
 RUN apt-get update && apt-get install -y \
     curl \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy and install requirements first (for better caching)
 COPY requirements.txt /code/
+RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Verify alembic installation
+RUN python -c "import alembic; print('Alembic installed successfully')"
 
 # Copy application files
 COPY app /code/app
 COPY alembic /code/alembic
 COPY alembic.ini /code/
 
+# Set Python path
 ENV PYTHONPATH=/code
 
 EXPOSE 8080
