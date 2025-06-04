@@ -45,6 +45,7 @@ passlib==1.7.4
 prompt_toolkit==3.0.50
 propcache==0.3.0
 psycopg2-binary==2.9.9
+psycopg==3.2.9
 pycares==4.5.0
 pycparser==2.22
 pydantic==2.10.2
@@ -55,7 +56,7 @@ PyJWT==2.10.0
 python-bitcoinlib==0.12.2
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
-python-multipart==0.0.17
+python-multipart==0.0.19
 PyYAML==6.0.2
 redis==5.2.1
 requests==2.32.3
