@@ -1,5 +1,4 @@
-
-FROM python:3.10-slim
+FROM python:3.9-slim
 
 WORKDIR /code
 
@@ -8,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     gcc \
     netcat-openbsd \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and install requirements first (for better caching)
@@ -15,8 +15,10 @@ COPY requirements.txt /code/
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Verify alembic installation
-RUN python -c "import alembic; print('Alembic installed successfully')"
+# Verify critical installations
+RUN python -c "import alembic; print('Alembic installed successfully')" && \
+    python -c "import fastapi; print('FastAPI installed successfully')" && \
+    python -c "import uvicorn; print('Uvicorn installed successfully')"
 
 # Copy application files
 COPY app /code/app
