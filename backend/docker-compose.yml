@@ -3,17 +3,24 @@ version: "3.8"
 services:
   backend:
     build: .
-    env_file: .env        # Coolify → Environment Group
+    environment:
+      # Coolify will inject these from Environment Variables
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - SECRET_KEY=${SECRET_KEY}
+      # Add other environment variables as needed
     expose:
       - "8080"
     labels:
-      - traefik.enable=true
-      - traefik.http.services.backend.loadbalancer.server.port=8080
-      - traefik.http.routers.backend.rule=Host(`nock.ing`) && PathPrefix(`/`)
-      - traefik.http.routers.backend.entryPoints=https
-      - traefik.http.routers.backend.tls=true
+      - "coolify.managed=true"
+      - "traefik.enable=true"
+      - "traefik.http.services.backend.loadbalancer.server.port=8080"
+      - "traefik.http.routers.backend.rule=Host(`${FQDN}`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
     depends_on:
       - psql
+      - redis
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:8080/health || exit 1"]
@@ -23,22 +30,23 @@ services:
 
   psql:
     image: postgres:16-alpine
-    env_file: .env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-myapp}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
-      - psql:/var/lib/postgresql/data
-    expose: ["5432"]
+      - psql_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-myapp}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis/redis-stack:latest
-    expose: ["6379"]
     volumes:
-      - redis-data:/data
+      - redis_data:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -47,5 +55,5 @@ services:
       retries: 3
 
 volumes:
-  psql:
-  redis-data:
+  psql_data:
+  redis_data:
