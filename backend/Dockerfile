@@ -24,14 +24,32 @@ RUN python -c "import alembic; print('Alembic installed successfully')" && \
 COPY app /code/app
 COPY alembic /code/alembic
 COPY alembic.ini /code/
+COPY main.py /code/
 
 # Set Python path
 ENV PYTHONPATH=/code
 
-EXPOSE 8080
+# Create startup script with proper variable expansion
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+# Set default port if not provided\n\
+PORT=${PORT:-8080}\n\
+\n\
+echo "Using port: $PORT"\n\
+echo "Waiting for database..."\n\
+while ! nc -z psql 5432; do\n\
+  sleep 1\n\
+done\n\
+echo "Database is up!"\n\
+echo "Running migrations..."\n\
+alembic upgrade head\n\
+echo "Starting FastAPI application on port $PORT..."\n\
+exec uvicorn main:app --host 0.0.0.0 --port "$PORT"' > /code/start.sh && \
+    chmod +x /code/start.sh
 
-# Add a health check endpoint test
+# Add a health check endpoint test (use default port for build time)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "$PORT"]
+CMD ["/code/start.sh"]

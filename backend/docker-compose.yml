@@ -14,9 +14,8 @@ services:
       - REDIS_PORT=6379
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - PYTHONPATH=/code
-      - PORT=${PORT:-8080}
-    ports:
-      - "${PORT:-8080}:${PORT:-8080}"
+      - PORT=${PORT}
+    # Remove hardcoded ports - let Coolify handle this
     labels:
       - "coolify.managed=true"
     depends_on:
@@ -26,7 +25,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:${PORT:-8080}/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:$${PORT:-8080}/health || exit 1"]
       interval: 30s
       timeout: 10s
       start_period: 60s
@@ -40,8 +39,6 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - psql_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-myapp}"]
@@ -54,8 +51,6 @@ services:
     image: redis/redis-stack:latest
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
