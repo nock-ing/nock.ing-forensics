@@ -28,12 +28,9 @@ COPY alembic.ini /code/
 # Set Python path
 ENV PYTHONPATH=/code
 
-# Don't expose a specific port - let Coolify handle it
-# EXPOSE directive is mainly for documentation anyway
-
 # Add a health check that uses the PORT environment variable
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
 
-# Use shell form to allow environment variable expansion
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-3000}
+# Use the correct module path: app.main:app instead of main:app
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-3000}
