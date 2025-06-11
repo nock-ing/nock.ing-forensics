@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from dotenv import load_dotenv
 import os
 
-from alembic import context
+from migrations import context
 
 
 load_dotenv()
