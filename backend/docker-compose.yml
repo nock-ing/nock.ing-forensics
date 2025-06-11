@@ -19,6 +19,9 @@ services:
     labels:
       - "coolify.managed=true"
       - "coolify.service.port=3000"
+      - traefik.enable=true
+      - "traefik.http.routers.<unique_router_name>.rule=Host(`coolify.io`) && PathPrefix(`/`)"
+      - traefik.http.routers.<unique_router_name>.entryPoints=http
     depends_on:
       psql:
         condition: service_healthy
