@@ -1,32 +1,6 @@
 version: "3.8"
 
 services:
-  migrate:
-    build: .
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - POSTGRES_DB=${POSTGRES_DB:-myapp}
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - PYTHONPATH=/code
-    command: >
-      sh -c "
-        echo 'Waiting for database...' &&
-        while ! nc -z psql 5432; do
-          sleep 1
-        done &&
-        echo 'Database is up!' &&
-        echo 'DATABASE_URL=' $$DATABASE_URL &&
-        echo 'Verifying alembic installation...' &&
-        python -c 'import alembic; print(\"Alembic OK\")' &&
-        echo 'Running migrations...' &&
-        alembic upgrade head
-      "
-    depends_on:
-      psql:
-        condition: service_healthy
-    restart: "no"
-
   backend:
     build: .
     environment:
@@ -40,25 +14,19 @@ services:
       - REDIS_PORT=6379
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - PYTHONPATH=/code
+      - PORT=${PORT:-8080}
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:${PORT:-8080}"
     labels:
       - "coolify.managed=true"
-      - "traefik.enable=true"
-      - "traefik.http.services.backend.loadbalancer.server.port=8080"
-      - "traefik.http.routers.backend.rule=Host(`${FQDN}`)"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
     depends_on:
       psql:
         condition: service_healthy
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:${PORT:-8080}/health || exit 1"]
       interval: 30s
       timeout: 10s
       start_period: 60s
