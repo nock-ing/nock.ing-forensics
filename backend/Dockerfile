@@ -24,32 +24,16 @@ RUN python -c "import alembic; print('Alembic installed successfully')" && \
 COPY app /code/app
 COPY alembic /code/alembic
 COPY alembic.ini /code/
-COPY main.py /code/
 
 # Set Python path
 ENV PYTHONPATH=/code
 
-# Create startup script with proper variable expansion
-RUN echo '#!/bin/bash\n\
-set -e\n\
-\n\
-# Set default port if not provided\n\
-PORT=${PORT:-8080}\n\
-\n\
-echo "Using port: $PORT"\n\
-echo "Waiting for database..."\n\
-while ! nc -z psql 5432; do\n\
-  sleep 1\n\
-done\n\
-echo "Database is up!"\n\
-echo "Running migrations..."\n\
-alembic upgrade head\n\
-echo "Starting FastAPI application on port $PORT..."\n\
-exec uvicorn main:app --host 0.0.0.0 --port "$PORT"' > /code/start.sh && \
-    chmod +x /code/start.sh
+# Don't expose a specific port - let Coolify handle it
+# EXPOSE directive is mainly for documentation anyway
 
-# Add a health check endpoint test (use default port for build time)
+# Add a health check that uses the PORT environment variable
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
+    CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
 
-CMD ["/code/start.sh"]
+# Use shell form to allow environment variable expansion
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-3000}
