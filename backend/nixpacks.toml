@@ -1,8 +1,24 @@
 [variables]
+# Runtime environment variables
 PYTHONPATH = "/app"
 
 [phases.setup]
-nixPkgs = ["curl", "netcat-gnu"]
+# Install system dependencies - use python3 instead of python39
+nixPkgs = ["python3", "python3Packages.pip", "python3Packages.virtualenv", "gcc", "curl", "netcat-gnu"]
+
+[phases.install]
+# Nixpacks will automatically create a virtual environment and install from requirements.txt
+# But we need to ensure python3 is used
+cmds = ["python3 -m pip install --upgrade pip"]
+
+[phases.build]
+# Verification commands using python3
+cmds = [
+    "python3 -c \"import alembic; print('Alembic installed successfully')\"",
+    "python3 -c \"import fastapi; print('FastAPI installed successfully')\"",
+    "python3 -c \"import uvicorn; print('Uvicorn installed successfully')\""
+]
 
 [start]
-cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+# Start command using python3
+cmd = "python3 -m uvicorn app.main:app --host 0.0.0.0 --port $PORT"
