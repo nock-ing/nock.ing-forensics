@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {cookies} from "next/headers";
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const NEXT_PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export async function GET() {
     try {
@@ -14,7 +14,7 @@ export async function GET() {
                 { status: 401 }
             );
         }
-        const url = `${BACKEND_URL}/latest-blocks?count=7`;
+        const url = `${NEXT_PUBLIC_BACKEND_URL}/latest-blocks?count=7`;
         const response = await fetch(url, {
             headers: {
                 'Accept': 'application/json',

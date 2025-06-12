@@ -2,14 +2,14 @@ import { cookies } from "next/headers";
 import {NextResponse} from "next/server";
 import {getBearerTokenFromHeaders} from "@/lib/auth";
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const NEXT_PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export async function POST() {
     try {
 
         const token = getBearerTokenFromHeaders();
 
-        const url = `${BACKEND_URL}/logout`;
+        const url = `${NEXT_PUBLIC_BACKEND_URL}/logout`;
         const response = await fetch(url, {
             method: 'POST',
             headers: {

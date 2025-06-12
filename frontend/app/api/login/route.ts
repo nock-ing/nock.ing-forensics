@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const NEXT_PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 interface LoginFormData {
     username: string;
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
             password: formData.get('password')?.toString() || '',
         };
 
-        const response = await fetch(`${BACKEND_URL}/login`, {
+        const response = await fetch(`${NEXT_PUBLIC_BACKEND_URL}/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
