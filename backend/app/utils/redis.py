@@ -2,8 +2,6 @@ import redis
 from app.config.config import settings
 import sys
 
-print(f"Attempting to connect to Redis with URL: {settings.REDIS_URL}")
-
 try:
     # Initialize Redis Connection using URL
     r = redis.from_url(settings.REDIS_URL)
@@ -13,7 +11,6 @@ try:
     print("Connected to Redis successfully!")
 except redis.exceptions.ConnectionError as e:
     print(f"Redis connection failed: {e}")
-    print(f"Redis URL being used: {settings.REDIS_URL}")
     # Don't exit, let the app start but warn about Redis issues
     r = None
 except Exception as e:
