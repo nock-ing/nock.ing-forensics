@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { setCookie } from 'cookies-next';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
@@ -109,6 +110,13 @@ export default function LoginForm() {
         >
           Sign In
         </Button>
+
+        <div className="mt-4 text-center text-sm">
+          Don&apos;t have an account?&nbsp;
+          <Link href="/register" className="text-blue-600 hover:text-blue-800 underline">
+            Register here
+          </Link>
+        </div>
       </form>
     </Form>
   );
