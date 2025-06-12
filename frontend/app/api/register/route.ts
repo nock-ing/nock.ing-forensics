@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const NEXT_PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+
 interface RegisterFormData {
     username: string;
     password: string;
@@ -9,7 +11,7 @@ export async function POST(request: NextRequest) {
     try {
         const body: RegisterFormData = await request.json();
 
-        const response = await fetch('http://127.0.0.1:8080/register', {
+        const response = await fetch(`${NEXT_PUBLIC_BACKEND_URL}/register`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
