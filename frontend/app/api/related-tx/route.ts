@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {cookies} from "next/headers";
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const NEXT_PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export async function GET(req: NextRequest) {
     try {
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const url = `${BACKEND_URL}/related-tx?txid=${txid}&depth=${depth}`;
+        const url = `${NEXT_PUBLIC_BACKEND_URL}/related-tx?txid=${txid}&depth=${depth}`;
         const response = await fetch(url, {
             headers: {
                 'Accept': 'application/json',

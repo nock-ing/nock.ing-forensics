@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import {NextResponse} from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const NEXT_PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export async function GET() {
 
@@ -16,7 +16,7 @@ export async function GET() {
             )
         }
 
-        const url = `${BACKEND_URL}/users/me`;
+        const url = `${NEXT_PUBLIC_BACKEND_URL}/users/me`;
 
         const response = await fetch(url, {
             headers: {

@@ -1,14 +1,14 @@
 import {getBearerTokenFromHeaders} from "@/lib/auth";
 import {NextResponse} from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const NEXT_PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 
 export async function GET() {
     try {
         const token = await getBearerTokenFromHeaders();
 
-        const response = await fetch(`${BACKEND_URL}/redis/recent-txids`, {
+        const response = await fetch(`${NEXT_PUBLIC_BACKEND_URL}/redis/recent-txids`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
             },
