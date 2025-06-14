@@ -9,5 +9,8 @@ export interface CustomNodeData {
 
 export interface TransactionFlowProps {
     transactionId: string | null;
+    user_id: number;
+    block_id: number;
+    wallet_id: number;
     zoomFactor: number;
 }

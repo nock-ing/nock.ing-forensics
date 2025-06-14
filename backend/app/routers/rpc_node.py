@@ -9,6 +9,7 @@ from app.utils.redis_service import RedisService, get_redis_service
 from app.utils.bitcoin_rpc import bitcoin_rpc_call
 from app.utils.format import sats_to_btc
 from app.utils.mempool_api import mempool_api_call
+from app.utils.wallet_types import identify_bitcoin_wallet_type
 
 router = APIRouter()
 
@@ -24,7 +25,10 @@ async def get_node_info(
     try:
         cached_node_info = redis_service.get("node_info")
         if cached_node_info:
-            return json.loads(cached_node_info)
+            if isinstance(cached_node_info, (str, bytes, bytearray)):
+                return json.loads(cached_node_info)
+            else:
+                return cached_node_info
 
         blockchain_info = await bitcoin_rpc_call("getblockchaininfo")
 
@@ -290,6 +294,7 @@ async def get_tx_wallet(
             if isinstance(cached_wallet, dict):
                 return cached_wallet
             return json.loads(cached_wallet)
+        
         tx_info = await mempool_api_call(f"api/tx/{txid}")
 
         if not tx_info:
@@ -304,26 +309,56 @@ async def get_tx_wallet(
                 status_code=404, detail=f"Transaction {txid} not found."
             )
 
+        # Identify wallet type BEFORE caching
+        wallet_type = identify_bitcoin_wallet_type(scriptpubkey_address)
+        
+        # Fetch address balance information
+        address_info = await mempool_api_call(f"api/address/{scriptpubkey_address}")
+        
+        # Calculate current balance in satoshis
+        chain_balance = address_info["chain_stats"]["funded_txo_sum"] - address_info["chain_stats"]["spent_txo_sum"]
+        mempool_balance = address_info["mempool_stats"]["funded_txo_sum"] - address_info["mempool_stats"]["spent_txo_sum"]
+        total_balance_satoshis = chain_balance + mempool_balance
+        
+        # Convert to BTC (optional - you can keep both)
+        total_balance_btc = total_balance_satoshis / 100_000_000
+        
+        # Prepare the response data
+        response_data = {
+            "txid": txid,
+            "scriptpubkey_address": scriptpubkey_address,
+            "wallet_type": wallet_type["type"].value,
+            "balance_satoshis": total_balance_satoshis,
+            "balance_btc": total_balance_btc,
+            "address_stats": {
+                "chain_stats": address_info["chain_stats"],
+                "mempool_stats": address_info["mempool_stats"],
+                "total_transactions": address_info["chain_stats"]["tx_count"] + address_info["mempool_stats"]["tx_count"]
+            }
+        }
+
+        # Cache the complete response data
         redis_service.set(
             cache_key,
-            json.dumps(
-                {
-                    "txid": txid,
-                    "scriptpubkey_address": scriptpubkey_address,
-                }
-            ),
+            json.dumps(response_data),
         )
+        
+        # Store in recent lists
         redis_service.lpush_trim(
             "wallet",
             json.dumps(
                 {"wallet": scriptpubkey_address, "added": datetime.now().isoformat()}
             ),
         )
-
-        return {
-            "txid": txid,
-            "scriptpubkey_address": scriptpubkey_address,
-        }
+        redis_service.lpush_trim(
+            "wallet_type",
+            json.dumps(
+                {"wallet_type": wallet_type["type"].value, "added": datetime.now().isoformat()}
+            ),
+        )
+        
+        return response_data
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
