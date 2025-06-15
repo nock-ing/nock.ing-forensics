@@ -17,15 +17,10 @@ import { useRouter } from 'next/navigation';
 import { useTransactionStore } from '@/store/useTransactionStore';
 import {CustomNodeData, TransactionFlowProps} from "@/types/relatedTx.types";
 import SaveTransactionButton from "@/components/SaveTransactionButton/SaveTransactionButton";
-import {useTransactionApi} from "@/hooks/useTransactionApi";
-import {useTxInsightFetcher} from "@/hooks/useTxInsightFetcher";
-import {CreateTransactionRequest} from "@/types/savedTransaction.types";
 
-export function RelatedTxReactFlow({transactionId, zoomFactor = 1, user_id, wallet_id, block_id}: TransactionFlowProps) {
+export function RelatedTxReactFlow({transactionId, zoomFactor = 1 }: TransactionFlowProps) {
     const router = useRouter();
 
-    const { createTransaction, getTransaction } = useTransactionApi();
-    const { fetchTxDataById } = useTxInsightFetcher(transactionId ?? '', true);
 
     const {
         relatedTxData,
@@ -70,15 +65,6 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1, user_id, wall
     const handleViewDetails = useCallback((txid: string) => {
         router.push(`/forensics?input=${txid}&isTxid=true`);
     }, [router]);
-
-    const handleSaveTransaction = useCallback(async (txid: string) => {
-        try {
-            let transactionDataRaw = await createTransaction(txid);
-
-        } catch (error) {
-            console.error('Failed to fetch transaction data:', error);
-        }
-    }, [fetchTxDataById]);
 
     useEffect(() => {
         if (!relatedTxData) return;
@@ -223,7 +209,6 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1, user_id, wall
 
             <TransactionDetailsPanel
                 onViewDetails={handleViewDetails}
-                onSaveTransaction={handleSaveTransaction}
             />
         </div>
     );

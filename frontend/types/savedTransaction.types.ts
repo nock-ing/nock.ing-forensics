@@ -12,9 +12,9 @@ export interface SavedTransaction {
 }
 
 export interface CreateTransactionRequest {
-    wallet_id: number;        // Remove ? to make required
-    user_id: number;          // Add this required field
-    block_id: number;         // Remove ? to make required
+    wallet_id?: number;        // Remove ? to make required
+    user_id?: number;          // Add this required field
+    block_id?: number;         // Remove ? to make required
     transaction_hash: string;
     timestamp?: number;
     total_input?: number;

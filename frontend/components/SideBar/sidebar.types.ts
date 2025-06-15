@@ -9,6 +9,7 @@ export type SidebarItem = {
 export type SidebarItems = SidebarItem[];
 
 export type User = {
+    id: number,
     username: string,
     email: string,
 }

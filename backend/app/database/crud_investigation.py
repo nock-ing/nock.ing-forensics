@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.database.crud_transaction import check_transaction_exists
+from app.database.crud_transaction import check_transaction_exists, create_transaction_with_dependencies
 from app.database.crud_wallet import check_wallet_exists
 from app.models.investigations import Investigations
 from app.schema.investigation import Investigation
@@ -88,4 +88,4 @@ async def check_tx_exists(db: AsyncSession, tx_id: int) -> bool:
 # Legacy function for backward compatibility
 async def create_tx(db: AsyncSession, tx: Transaction) -> Transactions:
     """Create a new transaction (backward compatibility)"""
-    return await create_transaction(db, tx)
+    return await create_transaction_with_dependencies(db, tx)

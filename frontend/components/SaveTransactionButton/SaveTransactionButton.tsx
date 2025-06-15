@@ -1,7 +1,7 @@
 "use client";
 import { useTransactionApi } from "@/hooks/useTransactionApi";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { CreateTransactionRequest } from "@/types/savedTransaction.types";
 
@@ -75,6 +75,7 @@ export default function SaveTransactionButton({ transactionData }: SaveTransacti
             // Optional fields - you might want to set these based on your needs
             wallet_id: undefined,
             block_id: undefined,
+            user_id: undefined,
         };
 
         const result = await createTransaction(transactionToSave);

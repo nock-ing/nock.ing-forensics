@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {cookies} from "next/headers";
+import {getBearerTokenFromHeaders} from "@/lib/auth";
 
 const NEXT_PUBLIC_BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
@@ -7,8 +7,7 @@ export async function GET(req: NextRequest) {
     try {
         const searchParams = req.nextUrl.searchParams;
         const txid = searchParams.get('txid');
-        const cookieStore = await cookies();
-        const token = cookieStore.get('token')?.value;
+        const token = await getBearerTokenFromHeaders();
 
         if (!token) {
             return NextResponse.json(
@@ -16,6 +15,14 @@ export async function GET(req: NextRequest) {
                 { status: 401 }
             );
         }
+
+        if (!txid || txid === '[object Object]' || txid === 'undefined') {
+            return NextResponse.json(
+                { error: 'Invalid or missing txid parameter' },
+                { status: 400 }
+            );
+        }
+
 
         const url = `${NEXT_PUBLIC_BACKEND_URL}/tx/wallet?txid=${txid}`;
         const response = await fetch(url, {

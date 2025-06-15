@@ -1,6 +1,9 @@
 import {useState} from 'react';
 import {getCookie} from "cookies-next";
 import {SavedTransaction, CreateTransactionRequest, UpdateTransactionRequest} from '@/types/savedTransaction.types';
+import {NextResponse} from "next/server";
+import {Transaction} from "@/types/transactions.types";
+import {useUser} from './use-user';
 
 interface ApiResponse<T> {
     data: T | null;
@@ -9,6 +12,7 @@ interface ApiResponse<T> {
 }
 
 export function useTransactionApi() {
+    const {user} = useUser();
     const [state, setState] = useState<{
         getTransaction: ApiResponse<SavedTransaction>;
         updateTransaction: ApiResponse<SavedTransaction>;
@@ -55,141 +59,37 @@ export function useTransactionApi() {
         }
     };
 
-    const createTransaction = async (transactionId: string): Promise<SavedTransaction | null> => {
+    // Simplified createTransaction method that matches your working Postman request
+    const createTransaction = async (transactionData: CreateTransactionRequest): Promise<SavedTransaction | null> => {
         setState(prev => ({...prev, createTransaction: {...prev.createTransaction, loading: true, error: null}}));
 
         try {
             const token = getCookie("token");
 
-            // Get raw transaction data
-            let rawTxResponse = await fetch(`/api/tx-info?txid=${transactionId}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            let rawTx = await rawTxResponse.json();
-
-            // Get wallet data from transaction
-            let walletFromTxResponse = await fetch(`/api/wallet-from-txid?txid=${transactionId}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            let walletFromTx = await walletFromTxResponse.json();
-
-            if (!rawTxResponse.ok || !walletFromTxResponse.ok) {
-                throw new Error('Failed to get transaction info');
+            if (!user?.id) {
+                throw new Error('User not authenticated');
             }
 
-            // Get current user ID from token or user endpoint
-            let userResponse = await fetch('/api/user/me', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
-
-            if (!userResponse.ok) {
-                throw new Error('Failed to get user information');
-            }
-
-            const userData = await userResponse.json();
-            const userId = userData.id || userData.user_id;
-
-            // Create or get wallet
-            let walletCreateResponse = await fetch('/api/wallets/create', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    wallet_name: walletFromTx.name ?? 'Created from transaction ' + transactionId,
-                    wallet_address: walletFromTx.scriptpubkey_address,
-                    wallet_type: walletFromTx.wallet_type,
-                    balance: walletFromTx.balance_btc,
-                    suspicious_illegal_activity: false,
-                })
-            });
-
-            if (!walletCreateResponse.ok) {
-                throw new Error('Failed to create wallet');
-            }
-
-            const walletData = await walletCreateResponse.json();
-            const walletId = walletData.id || walletData.wallet_id;
-
-            // Get or create block
-            let blockId;
-            const blockHash = rawTx.blockhash;
-            
-            if (blockHash) {
-                // Try to get existing block first
-                let blockResponse = await fetch(`/api/blocks/by-hash/${blockHash}`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
-
-                if (blockResponse.ok) {
-                    const blockData = await blockResponse.json();
-                    blockId = blockData.id || blockData.block_id;
-                } else {
-                    // Create new block if it doesn't exist
-                    let blockCreateResponse = await fetch('/api/blocks/create', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                            block_hash: blockHash,
-                            block_height: rawTx.status?.block_height,
-                            block_time: rawTx.status?.block_time,
-                            // Add other block fields as needed
-                        })
-                    });
-
-                    if (!blockCreateResponse.ok) {
-                        throw new Error('Failed to create block');
-                    }
-
-                    const newBlockData = await blockCreateResponse.json();
-                    blockId = newBlockData.id || newBlockData.block_id;
-                }
-            } else {
-                // Handle unconfirmed transactions
-                blockId = null; // or handle differently based on your requirements
-            }
-
-            // Prepare transaction data with real values
-            const transactionData = {
-                transaction_hash: transactionId,
-                wallet_id: walletId,
-                block_id: blockId,
-                user_id: userId,
-                timestamp: rawTx.status?.block_time || Math.floor(Date.now() / 1000),
-                total_input: rawTx.vin?.reduce((sum: number, input: any) => sum + (input.prevout?.value || 0), 0) || 0,
-                total_output: rawTx.vout?.reduce((sum: number, output: any) => sum + (output.value || 0), 0) || 0,
-                fee: rawTx.fee || 0,
-                suspicious_illegal_activity: false
+            // Prepare the request data to match your working Postman request
+            const requestData = {
+                transaction_hash: transactionData.transaction_hash,
+                wallet_id: transactionData.wallet_id || 1, // Default to 1 if not provided
+                block_id: transactionData.block_id || 1, // Default to 1 if not provided
+                user_id: user.id,
+                timestamp: transactionData.timestamp,
+                total_input: transactionData.total_input,
+                total_output: transactionData.total_output,
+                fee: transactionData.fee,
+                suspicious_illegal_activity: transactionData.suspicious_illegal_activity
             };
 
-            // Create the transaction
             const response = await fetch('/api/transactions/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify(transactionData),
+                body: JSON.stringify(requestData),
             });
 
             const data = await response.json();

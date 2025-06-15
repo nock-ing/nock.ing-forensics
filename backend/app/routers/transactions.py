@@ -23,7 +23,7 @@ async def create_transaction(
             detail="Transaction with this hash already exists"
         )
     
-    return await crud_transaction.create_transaction(db, transaction)
+    return await crud_transaction.create_transaction_with_dependencies(db, transaction)
 
 
 @router.get("/{transaction_id}", response_model=TransactionResponse)
