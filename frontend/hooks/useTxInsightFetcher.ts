@@ -1,9 +1,10 @@
-import { getCookie } from "cookies-next";
-import { useState, useCallback } from "react";
-import type { CoinAgeData } from "@/types/coinAgeData.types";
-import type { RelatedTransactionsProps } from "@/components/RelatedTransactions/relatedTransactions.types";
-import type { TransactionDetailsProps } from "@/types/transactions.types";
-import type { WalletAddressFromTxId } from "@/components/WalletAddressFromTxId/walletAddressFromTxId.types";
+import {getCookie} from "cookies-next";
+import {useCallback, useState} from "react";
+import type {CoinAgeData} from "@/types/coinAgeData.types";
+import type {RelatedTransactionsProps} from "@/components/RelatedTransactions/relatedTransactions.types";
+import type {TransactionDetailsProps} from "@/types/transactions.types";
+import type {WalletAddressFromTxId} from "@/components/WalletAddressFromTxId/walletAddressFromTxId.types";
+import {getBearerTokenFromHeaders} from "@/lib/auth";
 
 export function useTxInsightFetcher(input: string, isTxid: boolean) {
     const [coinAgeData, setCoinAgeData] = useState<CoinAgeData | null>(null);
@@ -73,7 +74,26 @@ export function useTxInsightFetcher(input: string, isTxid: boolean) {
         } finally {
             setLoading(false);
         }
-    }, [input, isTxid]); 
+    }, [input, isTxid]);
+
+const fetchTxDataById = async (txid: string) => {
+    const token = getCookie("token") || localStorage.getItem("token");
+    console.log(txid);
+    try {
+        const response = await fetch(`/api/tx-info?txid=${txid}`, {
+            headers: {Authorization: `Bearer ${token}`},
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch transaction data: ${response.status}`);
+        }
+        
+        return await response.json();
+    } catch(error: unknown) {
+        console.error(error);
+        throw error; // Re-throw so the caller can handle it
+    }
+}
 
     return {
         coinAgeData,
@@ -84,5 +104,6 @@ export function useTxInsightFetcher(input: string, isTxid: boolean) {
         loading,
         error,
         fetchTxInsights,
+        fetchTxDataById,
     };
 }

@@ -9,7 +9,7 @@ from app.routers import (
     investigations,
     background_tasks,
     price,
-    wallets,
+    wallets, transactions,
 )
 from dotenv import load_dotenv
 
@@ -28,6 +28,8 @@ app.include_router(price.router, tags=["price"])
 app.include_router(background_tasks.router, tags=["Background Tasks"])
 
 app.include_router(wallets.router, tags=["wallets db routes"])
+
+app.include_router(transactions.router, tags=["transactions"])
 
 
 @app.get("/health")

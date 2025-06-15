@@ -1,10 +1,13 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.database.crud_transaction import check_tx_exists
+from app.database.crud_transaction import check_transaction_exists, create_transaction_with_dependencies
 from app.database.crud_wallet import check_wallet_exists
 from app.models.investigations import Investigations
 from app.schema.investigation import Investigation
+from app.schema.transaction import Transaction, TransactionUpdate
+from app.models.transactions import Transactions
+from typing import List, Optional
 
 
 async def get_investigations(db: AsyncSession) -> Investigations:
@@ -61,3 +64,28 @@ async def delete_investigation_crud(db: AsyncSession, investigation_id: int) -> 
 
     await db.delete(db_investigation)
     await db.commit()
+
+
+async def delete_transaction(db: AsyncSession, transaction_id: int) -> bool:
+    """Delete a transaction"""
+    result = await db.execute(select(Transactions).where(Transactions.id == transaction_id))
+    db_transaction = result.scalars().first()
+    
+    if not db_transaction:
+        return False
+    
+    await db.delete(db_transaction)
+    await db.commit()
+    return True
+
+
+# Backward compatibility - keep the old function name
+async def check_tx_exists(db: AsyncSession, tx_id: int) -> bool:
+    """Check if a transaction exists (backward compatibility)"""
+    return await check_transaction_exists(db, tx_id)
+
+
+# Legacy function for backward compatibility
+async def create_tx(db: AsyncSession, tx: Transaction) -> Transactions:
+    """Create a new transaction (backward compatibility)"""
+    return await create_transaction_with_dependencies(db, tx)

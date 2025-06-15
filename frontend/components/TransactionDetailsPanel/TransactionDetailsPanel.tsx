@@ -6,12 +6,10 @@ import { useTransactionStore } from '@/store/useTransactionStore';
 
 interface TransactionDetailsPanelProps {
     onViewDetails: (txid: string) => void;
-    onSaveTransaction: (txid: string) => void;
 }
 
 export function TransactionDetailsPanel({
     onViewDetails,
-    onSaveTransaction,
 }: TransactionDetailsPanelProps) {
     // Use the Zustand store
     const { 
@@ -33,6 +31,7 @@ export function TransactionDetailsPanel({
         ? `$${(transaction.amount / 100000000 * transaction.priceAtTime).toFixed(2)}`
         : 'Price data unavailable';
 
+    console.log(transaction);
     return (
         <Card className="fixed right-4 top-4 w-96 p-6 shadow-lg bg-card border-2 border-[#F7931A]">
             <div className="flex justify-between items-start mb-4">
@@ -72,13 +71,7 @@ export function TransactionDetailsPanel({
                     >
                         View Details
                     </Button>
-                    <Button
-                        variant="outline"
-                        className="flex-1 border-[#F7931A] text-[#F7931A] hover:bg-[#F7931A] hover:text-white"
-                        onClick={() => onSaveTransaction(transaction.txid)}
-                    >
-                        Save Transaction
-                    </Button>
+
                 </div>
             </div>
         </Card>

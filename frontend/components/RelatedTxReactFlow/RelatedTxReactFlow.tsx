@@ -16,11 +16,12 @@ import { TransactionDetailsPanel } from '@/components/TransactionDetailsPanel/Tr
 import { useRouter } from 'next/navigation';
 import { useTransactionStore } from '@/store/useTransactionStore';
 import {CustomNodeData, TransactionFlowProps} from "@/types/relatedTx.types";
+import SaveTransactionButton from "@/components/SaveTransactionButton/SaveTransactionButton";
 
-export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionFlowProps) {
+export function RelatedTxReactFlow({transactionId, zoomFactor = 1 }: TransactionFlowProps) {
     const router = useRouter();
 
-    // Use the Zustand store instead of local state
+
     const {
         relatedTxData,
         nodes,
@@ -62,13 +63,8 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionF
     }, [selectNode, openPanel]);
 
     const handleViewDetails = useCallback((txid: string) => {
-        router.push(`/transaction/${txid}`);
+        router.push(`/forensics?input=${txid}&isTxid=true`);
     }, [router]);
-
-    const handleSaveTransaction = useCallback((txid: string) => {
-        // TODO: Implement save transaction functionality
-        console.log('Saving transaction:', txid);
-    }, []);
 
     useEffect(() => {
         if (!relatedTxData) return;
@@ -182,7 +178,20 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionF
     }
 
     return (
-        <div className="h-full w-full">
+        <div className="h-full w-full relative">
+            {/* Add Save Transaction Button for the main transaction */}
+            {relatedTxData && (
+                <div className="absolute top-4 right-4 z-10">
+                    <SaveTransactionButton
+                        transactionData={{
+                            txid: transactionId ?? '',
+                            amount: relatedTxData.data.amount,
+                            timestamp: relatedTxData.data.timestamp,
+                        }}
+                    />
+                </div>
+            )}
+
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -200,7 +209,6 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1}: TransactionF
 
             <TransactionDetailsPanel
                 onViewDetails={handleViewDetails}
-                onSaveTransaction={handleSaveTransaction}
             />
         </div>
     );
