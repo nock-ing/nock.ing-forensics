@@ -15,11 +15,13 @@ export function useTransactionApi() {
     const {user} = useUser();
     const [state, setState] = useState<{
         getTransaction: ApiResponse<SavedTransaction>;
+        getAllTransactions: ApiResponse<SavedTransaction[]>;
         updateTransaction: ApiResponse<SavedTransaction>;
         deleteTransaction: ApiResponse<boolean>;
         createTransaction: ApiResponse<SavedTransaction>;
     }>({
         getTransaction: {data: null, error: null, loading: false},
+        getAllTransactions: {data: null, error: null, loading: false},
         updateTransaction: {data: null, error: null, loading: false},
         deleteTransaction: {data: null, error: null, loading: false},
         createTransaction: {data: null, error: null, loading: false},
@@ -54,6 +56,36 @@ export function useTransactionApi() {
             setState(prev => ({
                 ...prev,
                 getTransaction: {data: null, error: errorMessage, loading: false}
+            }));
+            return null;
+        }
+    };
+
+    const getAllTransactions = async (): Promise<SavedTransaction[] | null> => {
+        setState(prev => ({...prev, getAllTransactions: {...prev.getAllTransactions, loading: true, error: null}}));
+
+        try {
+            const token = getCookie("token");
+
+            const response = await fetch('/api/transactions', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.detail || 'Failed to get saved transactions');
+            }
+
+            setState(prev => ({...prev, getAllTransactions: {data, error: null, loading: false}}));
+            return data;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            setState(prev => ({
+                ...prev,
+                getAllTransactions: {data: null, error: errorMessage, loading: false}
             }));
             return null;
         }
@@ -211,10 +243,12 @@ export function useTransactionApi() {
 
     return {
         getTransactionStatus: state.getTransaction,
+        getAllTransactionsStatus: state.getAllTransactions,
         updateTransactionStatus: state.updateTransaction,
         deleteTransactionStatus: state.deleteTransaction,
         createTransactionStatus: state.createTransaction,
         getTransaction,
+        getAllTransactions,
         createTransaction,
         updateTransaction,
         deleteTransaction,
