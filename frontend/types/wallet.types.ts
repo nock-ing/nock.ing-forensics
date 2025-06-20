@@ -73,3 +73,11 @@ export type RecentWallet = {
     wallet: string;
     added: string;
 }
+
+export type WalletsInDB = {
+    wallet_name?: string;
+    wallet_address?: string;
+    wallet_type?: string;
+    balance?: number;
+    suspicious_illegal_activity?: boolean;
+}

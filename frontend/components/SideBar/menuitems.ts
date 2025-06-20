@@ -1,4 +1,4 @@
-import {Home, Inbox, Cross, Settings, FileSearch} from "lucide-react";
+import {Home, Inbox, Cross, Settings, FileSearch, List} from "lucide-react";
 import {SidebarItems} from "@/components/SideBar/sidebar.types";
 
 export const items: SidebarItems = [
@@ -32,5 +32,10 @@ export const items: SidebarItems = [
         title: "Recent Search",
         url: "/recent-search",
         icon: FileSearch,
+    },
+    {
+        title: "Saved Wallets/Txs",
+        url: "/saved",
+        icon: List,
     }
 ]
