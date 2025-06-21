@@ -1,6 +1,18 @@
-from sqlmodel import Relationship
-from app.models.blocks import Blocks
-from app.models.transactions import Transactions
+from .users import Users
+from .wallets import Wallets  
+from .blocks import Blocks
+from .transactions import Transactions
+from .investigations import Investigations
+from .coin_age import CoinAge
+from .wallet_monitoring import MonitoredAddress, WalletTransaction
 
-Blocks.transactions = Relationship(back_populates="block")
-Transactions.block = Relationship(back_populates="transactions")
+__all__ = [
+    "Users",
+    "Wallets",
+    "Blocks", 
+    "Transactions",
+    "Investigations",
+    "CoinAge",
+    "MonitoredAddress",
+    "WalletTransaction"
+]

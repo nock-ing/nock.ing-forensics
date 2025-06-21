@@ -217,7 +217,7 @@ async def get_suspicious_transactions(db: AsyncSession, skip: int = 0, limit: in
     """Get all suspicious transactions"""
     result = await db.execute(
         select(Transactions)
-        .where(Transactions.suspicious_illegal_activity == True)
+        .where(Transactions.suspicious_illegal_activity)
         .offset(skip)
         .limit(limit)
     )

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRecentTxids } from "@/hooks/useRecentTxids";
-import { useRecentWallets } from "@/hooks/useRecentWallets";
+import { useRecentTxids } from "@/hooks/use-recent-txids";
+import { useRecentWallets } from "@/hooks/use-recent-wallets";
 import { convertIsoDateToLocaleString } from "@/utils/formatters";
 import Link from "next/link";
 import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";

@@ -10,8 +10,8 @@ import BitcoinPrevTxChart from "@/components/BitcoinPrevTxChart/BitcoinPrevTxCha
 import TransactionInfo from "@/components/TransactionInfo/TransactionInfo"
 import WalletAddressFromTxid from "@/components/WalletAddressFromTxId/WalletAddressFromTxid"
 import Link from "next/link";
-import {useTxInsightFetcher} from "@/hooks/useTxInsightFetcher";
-import {useWalletInsightFetcher} from "@/hooks/useWalletInsightFetcher";
+import {useTxInsightFetcher} from "@/hooks/use-tx-insight-fetcher";
+import {useWalletInsightFetcher} from "@/hooks/use-wallet-insight-fetcher";
 import {WalletTransactionsDisplay} from "@/components/WalletTransactionsDisplay";
 import WalletInfo from "@/components/WalletInfo/WalletInfo";
 import WalletActivityHeatmap from "@/components/WalletActivityHeatmap/WalletActivityHeatmap";

@@ -2,6 +2,9 @@ from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from datetime import datetime
 
+from app.models import Users
+
+
 class MonitoredAddress(SQLModel, table=True):
     __tablename__ = "monitored_addresses"
 

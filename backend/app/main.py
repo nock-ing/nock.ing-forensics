@@ -1,56 +1,108 @@
-from fastapi import FastAPI
-import os
 import asyncio
+import logging
 from contextlib import asynccontextmanager
-from app.routers import wallet_monitoring
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.routers import (
+    auth, 
+    users, 
+    transactions, 
+    investigations, 
+    price, 
+    redis, 
+    rpc_node, 
+    wallets,
+    wallet_monitoring,
+    background_tasks
+)
 from app.services.background_monitoring import background_service
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+logger = logging.getLogger(__name__)
+
+# Background task for the monitoring service
+background_task = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Handle application startup and shutdown"""
+    global background_task
+    
     # Startup
-    # Start background monitoring service
-    task = asyncio.create_task(background_service.start())
+    logger.info("Starting application...")
+    
+    # Start the background monitoring service
+    logger.info("Starting background monitoring service...")
+    background_task = asyncio.create_task(background_service.start())
+    
     yield
+    
     # Shutdown
-    await background_service.stop()
-    task.cancel()
+    logger.info("Shutting down application...")
+    
+    # Stop the background monitoring service
+    if background_task:
+        logger.info("Stopping background monitoring service...")
+        await background_service.stop()
+        background_task.cancel()
+        try:
+            await background_task
+        except asyncio.CancelledError:
+            logger.info("Background monitoring service stopped")
 
-app = FastAPI(lifespan=lifespan)
-
-from app.routers import (
-    auth,
-    redis,
-    users,
-    rpc_node,
-    investigations,
-    background_tasks,
-    price,
-    wallets, 
-    transactions,
+app = FastAPI(
+    title="Bitcoin Analysis API",
+    description="API for Bitcoin blockchain analysis and monitoring",
+    version="1.0.0",
+    lifespan=lifespan
 )
-from dotenv import load_dotenv
 
-load_dotenv()
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure this properly for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-app.include_router(auth.router, tags=["auth"])
-app.include_router(users.router, tags=["users"])
-app.include_router(rpc_node.router, tags=["rpc_node"])
-app.include_router(redis.router, tags=["redis"])
+# Include routers
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(transactions.router)
 app.include_router(investigations.router)
-app.include_router(price.router, tags=["price"])
-app.include_router(background_tasks.router, tags=["Background Tasks"])
-app.include_router(wallets.router, tags=["wallets db routes"])
-app.include_router(transactions.router, tags=["transactions"])
+app.include_router(price.router)
+app.include_router(redis.router)
+app.include_router(rpc_node.router)
+app.include_router(wallets.router)
+app.include_router(wallet_monitoring.router)
+app.include_router(background_tasks.router)
 
-# Include the wallet monitoring router with authentication
-app.include_router(wallet_monitoring.router, tags=["wallet-monitoring"])
+@app.get("/")
+async def root():
+    return {
+        "message": "Bitcoin Analysis API",
+        "version": "1.0.0",
+        "monitoring_status": {
+            "background_service_running": background_service.is_running,
+            "websocket_connected": background_service.mempool_service.is_connected,
+            "tracked_addresses": list(background_service.mempool_service.tracked_addresses)
+        }
+    }
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
-
-if __name__ == "__main__":
-    import uvicorn
-    
-    port = int(os.getenv("PORT", 3000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    return {
+        "status": "healthy",
+        "background_service": {
+            "running": background_service.is_running,
+            "websocket_connected": background_service.mempool_service.is_connected,
+            "tracked_addresses_count": len(background_service.mempool_service.tracked_addresses)
+        }
+    }

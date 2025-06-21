@@ -5,6 +5,7 @@ if TYPE_CHECKING:
     from app.models.transactions import Transactions
     from app.models.wallets import Wallets
     from app.models.investigations import Investigations
+    from app.models.wallet_monitoring import MonitoredAddress
 
 
 class Users(SQLModel, table=True):
@@ -16,3 +17,4 @@ class Users(SQLModel, table=True):
     transactions: List["Transactions"] = Relationship(back_populates="user")
     wallets: List["Wallets"] = Relationship(back_populates="user")
     investigations: List["Investigations"] = Relationship(back_populates="user")
+    monitored_addresses: List["MonitoredAddress"] = Relationship(back_populates="user")

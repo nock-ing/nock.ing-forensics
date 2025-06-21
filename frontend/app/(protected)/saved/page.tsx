@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useWalletApi } from '@/hooks/useWalletApi';
-import { useTransactionApi } from '@/hooks/useTransactionApi';
+import { useWalletApi } from '@/hooks/use-wallet-api';
+import { useTransactionApi } from '@/hooks/use-transaction-api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';

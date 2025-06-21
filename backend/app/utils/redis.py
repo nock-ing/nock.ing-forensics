@@ -1,6 +1,5 @@
 import redis
 from app.config.config import settings
-import sys
 
 try:
     # Initialize Redis Connection using URL

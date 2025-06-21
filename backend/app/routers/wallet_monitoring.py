@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from typing import List, Optional
 from pydantic import BaseModel
+from loguru import logger
+from datetime import datetime
 
 from app.database.database import get_db
 from app.auth.dependencies import get_current_active_user
 from app.schema.user import UserBase
 from app.models.wallet_monitoring import MonitoredAddress, WalletTransaction
-from app.services.mempool_websocket import MempoolWebSocketService
 from app.services.background_monitoring import background_service
 
 router = APIRouter(prefix="/wallet-monitoring", tags=["wallet-monitoring"])
@@ -23,10 +24,9 @@ class SingleAddressRequest(BaseModel):
 class MonitoredAddressResponse(BaseModel):
     id: int
     address: str
-    label: str = None
+    label: Optional[str] = None  # Make label optional with default None
     is_active: bool
-    created_at: str
-
+    created_at: datetime
 
 class AddressToTrack(BaseModel):
     address: str
@@ -142,7 +142,7 @@ async def get_monitored_addresses(
     result = await db.execute(
         select(MonitoredAddress).where(
             MonitoredAddress.user_id == current_user.id,
-            MonitoredAddress.is_active == True
+            MonitoredAddress.is_active
         )
     )
     addresses = result.scalars().all()
@@ -153,7 +153,7 @@ async def get_monitored_addresses(
             address=addr.address,
             label=addr.label,
             is_active=addr.is_active,
-            created_at=addr.created_at.isoformat()
+            created_at=addr.created_at
         )
         for addr in addresses
     ]
@@ -227,7 +227,7 @@ async def get_monitoring_status(
     result = await db.execute(
         select(MonitoredAddress).where(
             MonitoredAddress.user_id == current_user.id,
-            MonitoredAddress.is_active == True
+            MonitoredAddress.is_active
         )
     )
     user_addresses = result.scalars().all()
@@ -235,5 +235,372 @@ async def get_monitoring_status(
     return {
         "websocket_connected": background_service.mempool_service.is_connected,
         "monitored_addresses_count": len(user_addresses),
-        "monitored_addresses": [addr.address for addr in user_addresses]
+        "monitored_addresses": [addr.address for addr in user_addresses],
+        "background_service_running": background_service.is_running,
+        "tracked_addresses_in_websocket": list(background_service.mempool_service.tracked_addresses)
     }
+
+@router.post("/debug/test-real-transaction")
+async def debug_test_real_transaction(
+    current_user: UserBase = Depends(get_current_active_user)
+):
+    """Debug endpoint to test transaction processing with real Mempool data format"""
+    
+    # This is the actual format from your Mempool WebSocket
+    real_transaction_data = {
+        "block-transactions": [
+            {
+                "txid": "3a2d70d3754921aaba6fabbd260086fe78d0f8e00a32bce131c345eb8aab250a",
+                "version": 1,
+                "locktime": 0,
+                "size": 588,
+                "weight": 2025,
+                "fee": 5070,
+                "vin": [
+                    {
+                        "is_coinbase": False,
+                        "prevout": None,
+                        "scriptsig": "",
+                        "scriptsig_asm": "",
+                        "sequence": 4294967295,
+                        "txid": "b1719f613c54d5a136a796ac21f1691760866e658a141d76a6b9fa7d5d684744",
+                        "vout": 0,
+                        "witness": [
+                            "304402207da0e91641e64b33402b4c17581065b13e3060d29b6bb8f837b9f08aea6f00c60220411d2ef8db28b8abdc4cb1ceb347f6b53288ec3611589ea35ef2747ed0f17e7701",
+                            "02174ee672429ff94304321cdae1fc1e487edf658b34bd1d36da03761658a2bb09"
+                        ],
+                        "inner_redeemscript_asm": "",
+                        "inner_witnessscript_asm": ""
+                    }
+                ],
+                "vout": [
+                    {
+                        "value": 160733,
+                        "scriptpubkey": "0014bd22fb71504d70e36a3ea57afff837301b951c38",
+                        "scriptpubkey_address": "bc1qh530ku2sf4cwx63754a0l7phxqde28pc5afm6f",
+                        "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 bd22fb71504d70e36a3ea57afff837301b951c38",
+                        "scriptpubkey_type": "v0_p2wpkh"
+                    },
+                    {
+                        "value": 1278967,
+                        "scriptpubkey": "0014dc6bf86354105de2fcd9868a2b0376d6731cb92f",
+                        "scriptpubkey_address": "bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h",
+                        "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 dc6bf86354105de2fcd9868a2b0376d6731cb92f",
+                        "scriptpubkey_type": "v0_p2wpkh"
+                    }
+                ],
+                "status": {
+                    "confirmed": True,
+                    "block_height": 902161,
+                    "block_hash": "0000000000000000000011d35e1793a917d8d52e8bbce650bff5b7323a0ee6b5",
+                    "block_time": 1750494309
+                },
+                "firstSeen": 1750493907
+            }
+        ]
+    }
+    
+    # Process the real transaction
+    await background_service.transaction_processor.process_address_transactions(real_transaction_data)
+    
+    return {"message": "Real transaction processed", "data": real_transaction_data}
+
+@router.post("/debug/test-address-transaction")
+async def debug_test_address_transaction(
+    current_user: UserBase = Depends(get_current_active_user)
+):
+    """Debug endpoint to test address-transaction processing"""
+    
+    # Real address-transactions format from your WebSocket
+    address_transaction_data = {
+        "address-transactions": [
+            {
+                "txid": "480f0c1be502da46bf734112437516e2ce6bb51e54873e43bffe6af3936feb4c",
+                "version": 1,
+                "locktime": 0,
+                "size": 510,
+                "weight": 1713,
+                "fee": 4290,
+                "vin": [
+                    {
+                        "is_coinbase": False,
+                        "prevout": {
+                            "value": 22578023,
+                            "scriptpubkey": "0014dc6bf86354105de2fcd9868a2b0376d6731cb92f",
+                            "scriptpubkey_address": "bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h",
+                            "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 dc6bf86354105de2fcd9868a2b0376d6731cb92f",
+                            "scriptpubkey_type": "v0_p2wpkh"
+                        },
+                        "scriptsig": "",
+                        "scriptsig_asm": "",
+                        "sequence": 4294967295,
+                        "txid": "af99282fe5b52ec884fc7cd06888cba8866bbb36edd7399acbe81bf403e0d78b",
+                        "vout": 1
+                    }
+                ],
+                "vout": [
+                    {
+                        "value": 1164036,
+                        "scriptpubkey": "001491f0656d1b0399e90ab0ede58e33ccf7b97483e4",
+                        "scriptpubkey_address": "bc1qj8cx2mgmqwv7jz4sahjcuv7v77uhfqlyljnzww",
+                        "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 91f0656d1b0399e90ab0ede58e33ccf7b97483e4",
+                        "scriptpubkey_type": "v0_p2wpkh"
+                    },
+                    {
+                        "value": 12820810,
+                        "scriptpubkey": "0014dc6bf86354105de2fcd9868a2b0376d6731cb92f",
+                        "scriptpubkey_address": "bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h",
+                        "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 dc6bf86354105de2fcd9868a2b0376d6731cb92f",
+                        "scriptpubkey_type": "v0_p2wpkh"
+                    }
+                ],
+                "status": {
+                    "confirmed": False
+                },
+                "firstSeen": 1750494365
+            }
+        ]
+    }
+    
+    # Process the address transaction
+    await background_service.transaction_processor.process_address_transactions(address_transaction_data)
+    
+    return {
+        "message": "Address transaction processed", 
+        "transaction_analysis": {
+            "txid": "480f0c1be502da46bf734112437516e2ce6bb51e54873e43bffe6af3936feb4c",
+            "monitored_address": "bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h",
+            "input_amount": 22578023,
+            "output_amount": 12820810,
+            "net_amount": -9757213,  # Negative = outgoing
+            "transaction_type": "outgoing",
+            "fee": 4290
+        }
+    }
+
+@router.post("/debug/test-multi-address-transaction")
+async def debug_test_multi_address_transaction(
+    current_user: UserBase = Depends(get_current_active_user)
+):
+    """Debug endpoint to test multi-address-transaction processing"""
+    
+    # Multi-address-transactions format (for when tracking multiple addresses)
+    multi_address_transaction_data = {
+        "multi-address-transactions": [
+            {
+                "txid": "test-multi-address-tx-123",
+                "version": 1,
+                "locktime": 0,
+                "size": 510,
+                "weight": 1713,
+                "fee": 4290,
+                "vin": [
+                    {
+                        "is_coinbase": False,
+                        "prevout": {
+                            "value": 22578023,
+                            "scriptpubkey": "0014dc6bf86354105de2fcd9868a2b0376d6731cb92f",
+                            "scriptpubkey_address": "bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h",
+                            "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 dc6bf86354105de2fcd9868a2b0376d6731cb92f",
+                            "scriptpubkey_type": "v0_p2wpkh"
+                        },
+                        "scriptsig": "",
+                        "scriptsig_asm": "",
+                        "sequence": 4294967295,
+                        "txid": "af99282fe5b52ec884fc7cd06888cba8866bbb36edd7399acbe81bf403e0d78b",
+                        "vout": 1
+                    }
+                ],
+                "vout": [
+                    {
+                        "value": 1164036,
+                        "scriptpubkey": "001491f0656d1b0399e90ab0ede58e33ccf7b97483e4",
+                        "scriptpubkey_address": "bc1qj8cx2mgmqwv7jz4sahjcuv7v77uhfqlyljnzww",
+                        "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 91f0656d1b0399e90ab0ede58e33ccf7b97483e4",
+                        "scriptpubkey_type": "v0_p2wpkh"
+                    },
+                    {
+                        "value": 12820810,
+                        "scriptpubkey": "0014dc6bf86354105de2fcd9868a2b0376d6731cb92f",
+                        "scriptpubkey_address": "bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h",
+                        "scriptpubkey_asm": "OP_0 OP_PUSHBYTES_20 dc6bf86354105de2fcd9868a2b0376d6731cb92f",
+                        "scriptpubkey_type": "v0_p2wpkh"
+                    }
+                ],
+                "status": {
+                    "confirmed": False
+                },
+                "firstSeen": 1750494365
+            }
+        ]
+    }
+    
+    # Process the multi-address transaction
+    await background_service.transaction_processor.process_address_transactions(multi_address_transaction_data)
+    
+    return {
+        "message": "Multi-address transaction processed", 
+        "format": "multi-address-transactions (for tracking multiple addresses)"
+    }
+
+@router.post("/debug/start-monitoring-service")
+async def debug_start_monitoring_service(
+    current_user: UserBase = Depends(get_current_active_user)
+):
+    """Debug endpoint to manually start the monitoring service"""
+    if background_service.is_running:
+        return {"message": "Background monitoring service is already running"}
+    
+    try:
+        # Start the service in the background
+        import asyncio
+        asyncio.create_task(background_service.start())
+        
+        # Give it a moment to start
+        await asyncio.sleep(2)
+        
+        return {
+            "message": "Background monitoring service started",
+            "status": {
+                "running": background_service.is_running,
+                "websocket_connected": background_service.mempool_service.is_connected,
+                "tracked_addresses": list(background_service.mempool_service.tracked_addresses)
+            }
+        }
+    except Exception as e:
+        return {"error": f"Failed to start monitoring service: {e}"}
+
+@router.post("/debug/check-websocket-connection")
+async def debug_check_websocket_connection(
+    current_user: UserBase = Depends(get_current_active_user)
+):
+    """Debug endpoint to check WebSocket connection status"""
+    
+    # Try to connect manually if not connected
+    if not background_service.mempool_service.is_connected:
+        logger.info("WebSocket not connected, attempting to connect...")
+        await background_service.mempool_service.connect()
+    
+    return {
+        "websocket_connected": background_service.mempool_service.is_connected,
+        "websocket_url": background_service.mempool_service.websocket_url,
+        "tracked_addresses": list(background_service.mempool_service.tracked_addresses),
+        "background_service_running": background_service.is_running,
+        "message_handlers_count": len(background_service.mempool_service.message_handlers)
+    }
+
+@router.post("/debug/force-track-addresses")
+async def debug_force_track_addresses(
+    current_user: UserBase = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Debug endpoint to force re-track all monitored addresses"""
+    
+    # Get all monitored addresses for this user
+    result = await db.execute(
+        select(MonitoredAddress).where(
+            MonitoredAddress.user_id == current_user.id,
+            MonitoredAddress.is_active
+        )
+    )
+    addresses = result.scalars().all()
+    
+    if not addresses:
+        return {"message": "No monitored addresses found for this user"}
+    
+    address_list = [addr.address for addr in addresses]
+    
+    # Ensure WebSocket is connected
+    if not background_service.mempool_service.is_connected:
+        await background_service.mempool_service.connect()
+    
+    # Track addresses
+    await background_service.mempool_service.track_addresses(address_list)
+    
+    return {
+        "message": f"Force tracking {len(address_list)} addresses",
+        "addresses": address_list,
+        "websocket_connected": background_service.mempool_service.is_connected,
+        "tracked_addresses": list(background_service.mempool_service.tracked_addresses)
+    }
+
+@router.post("/switch-tracking-address")
+async def switch_tracking_address(
+    request: SingleAddressRequest,
+    current_user: UserBase = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Switch WebSocket tracking to a specific address"""
+    
+    # Verify the address belongs to the current user
+    result = await db.execute(
+        select(MonitoredAddress).where(
+            MonitoredAddress.address == request.address,
+            MonitoredAddress.user_id == current_user.id,
+            MonitoredAddress.is_active
+        )
+    )
+    
+    address = result.scalars().first()
+    if not address:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Address not found or not owned by current user"
+        )
+    
+    # Switch tracking to this address
+    await background_service.switch_to_address(request.address)
+    
+    return {
+        "message": f"Switched tracking to address: {request.address}",
+        "status": background_service.get_status()
+    }
+
+@router.get("/tracking-status")
+async def get_tracking_status(
+    current_user: UserBase = Depends(get_current_active_user)
+):
+    """Get current tracking status"""
+    return {
+        "tracking_status": background_service.get_status(),
+        "note": "Due to Mempool API limitations, only 1 address can be tracked at a time via WebSocket"
+    }
+
+@router.post("/debug/track-single-address")
+async def debug_track_single_address(
+    request: SingleAddressRequest,
+    current_user: UserBase = Depends(get_current_active_user)
+):
+    """Debug endpoint to track a single address"""
+    
+    # Ensure WebSocket is connected
+    if not background_service.mempool_service.is_connected:
+        await background_service.mempool_service.connect()
+    
+    # Track the address
+    await background_service.switch_to_address(request.address)
+    
+    return {
+        "message": f"Now tracking address: {request.address}",
+        "status": background_service.get_status()
+    }
+
+# In wallet_monitoring.py router
+@router.websocket("/ws/transactions/{user_id}")
+async def websocket_endpoint(websocket: WebSocket, user_id: int):
+    await websocket.accept()
+    # Add websocket to a connection manager
+    # Forward transaction updates to connected clients
+
+# Connection manager to handle multiple frontend connections
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+    
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+    
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)

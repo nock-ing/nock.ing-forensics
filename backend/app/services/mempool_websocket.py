@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Callable
 import websockets
 from websockets.exceptions import ConnectionClosed, WebSocketException
 
@@ -20,6 +20,7 @@ class MempoolWebSocketService:
     async def connect(self):
         """Establish WebSocket connection to Mempool API"""
         try:
+            logger.info(f"Attempting to connect to {self.websocket_url}")
             self.websocket = await websockets.connect(self.websocket_url)
             self.is_connected = True
             logger.info(f"Connected to Mempool WebSocket at {self.websocket_url}")
@@ -39,10 +40,16 @@ class MempoolWebSocketService:
     async def track_address(self, address: str):
         """Track a single Bitcoin address"""
         if not self.is_connected:
+            logger.info("Not connected, attempting to connect...")
             await self.connect()
+
+        if not self.is_connected:
+            logger.error("Cannot track address - not connected to WebSocket")
+            return
 
         try:
             message = {"track-address": address}
+            logger.info(f"Sending track-address message: {message}")
             await self.websocket.send(json.dumps(message))
             self.tracked_addresses.add(address)
             logger.info(f"Started tracking address: {address}")
@@ -52,36 +59,53 @@ class MempoolWebSocketService:
     async def track_addresses(self, addresses: List[str]):
         """Track multiple Bitcoin addresses"""
         if not self.is_connected:
+            logger.info("Not connected, attempting to connect...")
             await self.connect()
+
+        if not self.is_connected:
+            logger.error("Cannot track addresses - not connected to WebSocket")
+            return
 
         try:
             message = {"track-addresses": addresses}
+            logger.info(f"Sending track-addresses message: {message}")
             await self.websocket.send(json.dumps(message))
             self.tracked_addresses.update(addresses)
-            logger.info(f"Started tracking {len(addresses)} addresses")
+            logger.info(f"Started tracking {len(addresses)} addresses: {addresses}")
         except Exception as e:
             logger.error(f"Failed to track addresses: {e}")
 
     def add_message_handler(self, handler: Callable[[Dict[str, Any]], None]):
         """Add a message handler function"""
         self.message_handlers.append(handler)
+        logger.info(f"Added message handler: {handler.__name__}")
 
     async def listen_for_messages(self):
         """Listen for incoming WebSocket messages"""
+        logger.info("Starting to listen for WebSocket messages...")
         while self.is_connected:
             try:
                 if not self.websocket:
+                    logger.warning("WebSocket connection is None")
                     break
 
                 message = await self.websocket.recv()
-                data = json.loads(message)
+                logger.info(f"Received raw WebSocket message: {message}")
+                
+                try:
+                    data = json.loads(message)
+                    logger.info(f"Parsed WebSocket message: {json.dumps(data, indent=2)}")
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to decode JSON message: {e}, raw message: {message}")
+                    continue
 
                 # Process the message through all handlers
                 for handler in self.message_handlers:
                     try:
+                        logger.info(f"Processing message with handler: {handler.__name__}")
                         await handler(data)
                     except Exception as e:
-                        logger.error(f"Error in message handler: {e}")
+                        logger.error(f"Error in message handler {handler.__name__}: {e}")
 
             except ConnectionClosed:
                 logger.warning("WebSocket connection closed")
@@ -91,8 +115,6 @@ class MempoolWebSocketService:
                 logger.error(f"WebSocket error: {e}")
                 self.is_connected = False
                 break
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to decode JSON message: {e}")
             except Exception as e:
                 logger.error(f"Unexpected error in message listener: {e}")
 
@@ -101,6 +123,7 @@ class MempoolWebSocketService:
         attempt = 0
         while attempt < self._max_reconnect_attempts:
             try:
+                logger.info(f"Starting WebSocket service (attempt {attempt + 1})")
                 if await self.connect():
                     # Start listening for messages
                     await self.listen_for_messages()
