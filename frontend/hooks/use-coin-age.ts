@@ -1,4 +1,4 @@
-// hooks/useCoinAge.ts
+// hooks/use-coin-age.ts
 import { useState, useEffect } from 'react';
 import {CoinAgeResponse} from "@/types/coinAgeData.types";
 import {getCookie} from "cookies-next";

@@ -1,7 +1,7 @@
 "use client";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs"
-import {useRecentTxids} from "@/hooks/useRecentTxids";
-import {useRecentWallets} from "@/hooks/useRecentWallets";
+import {useRecentTxids} from "@/hooks/use-recent-txids";
+import {useRecentWallets} from "@/hooks/use-recent-wallets";
 import {DataTable} from "@/app/(protected)/recent-search/data-table";
 import {columns as txidColumns} from "@/app/(protected)/recent-search/columns";
 import {convertIsoDateToLocaleString} from "@/utils/formatters";

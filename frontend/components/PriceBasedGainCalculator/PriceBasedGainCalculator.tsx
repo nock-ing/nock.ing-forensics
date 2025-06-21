@@ -1,4 +1,4 @@
-import {useHistoricalPrices} from "@/hooks/useHistoricalPrices";
+import {useHistoricalPrices} from "@/hooks/use-historical-prices";
 import {CoinAgeResponse} from "@/types/coinAgeData.types";
 import {calculateRealizedGain} from "@/utils/calculateRealizedGain";
 

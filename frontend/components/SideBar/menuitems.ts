@@ -1,4 +1,4 @@
-import {Home, Inbox, Cross, Settings, FileSearch, List} from "lucide-react";
+import {Home, Inbox, Cross, Settings, FileSearch, List, Eye} from "lucide-react";
 import {SidebarItems} from "@/components/SideBar/sidebar.types";
 
 export const items: SidebarItems = [
@@ -6,6 +6,11 @@ export const items: SidebarItems = [
         title: "Home",
         url: "/dashboard",
         icon: Home,
+    },
+    {
+        title: "Wallet Monitoring",
+        url: "/wallet-monitoring",
+        icon: Eye,
     },
     /*{
         title: "Investigations",

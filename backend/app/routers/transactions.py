@@ -5,7 +5,6 @@ from typing import List
 from app.database.database import get_db
 from app.database import crud_transaction
 from app.schema.transaction import Transaction, TransactionResponse, TransactionUpdate
-from app.models.transactions import Transactions
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 

@@ -1,5 +1,5 @@
 "use client";
-import {useWalletApi} from "@/hooks/useWalletApi";
+import {useWalletApi} from "@/hooks/use-wallet-api";
 import {Button} from "@/components/ui/button";
 import {useState, useEffect} from "react";
 import {WalletData} from "@/types/wallet.types";

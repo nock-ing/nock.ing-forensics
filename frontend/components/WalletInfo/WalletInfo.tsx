@@ -13,7 +13,7 @@ import {useRouter} from 'next/navigation'
 import {AlertCircle, ExternalLink, Flag} from "lucide-react";
 import SaveWalletButton from "@/components/SaveWalletButton/SaveWalletButton";
 import {Button} from "@/components/ui/button";
-import {useWalletApi} from "@/hooks/useWalletApi";
+import {useWalletApi} from "@/hooks/use-wallet-api";
 
 
 type WalletInfoProps = {

@@ -1,4 +1,4 @@
-// hooks/useRecentWallets.ts
+// hooks/use-recent-wallets.ts
 import { useState, useEffect } from 'react';
 import { getCookie } from 'cookies-next';
 import {RecentWallet} from "@/types/wallet.types";

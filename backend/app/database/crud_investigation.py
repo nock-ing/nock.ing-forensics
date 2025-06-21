@@ -5,9 +5,8 @@ from app.database.crud_transaction import check_transaction_exists, create_trans
 from app.database.crud_wallet import check_wallet_exists
 from app.models.investigations import Investigations
 from app.schema.investigation import Investigation
-from app.schema.transaction import Transaction, TransactionUpdate
+from app.schema.transaction import Transaction
 from app.models.transactions import Transactions
-from typing import List, Optional
 
 
 async def get_investigations(db: AsyncSession) -> Investigations:
