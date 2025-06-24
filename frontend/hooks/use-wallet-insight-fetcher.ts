@@ -6,6 +6,7 @@ export function useWalletInsightFetcher(input: string, isTxid: boolean) {
     const [walletData, setWalletData] = useState<WalletData | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [tooManyTransactions, setTooManyTransactions] = useState(false);
 
     const fetchWalletInsights = useCallback(
         async (type: 'wallet' | 'wallettx') => {
@@ -16,6 +17,7 @@ export function useWalletInsightFetcher(input: string, isTxid: boolean) {
 
             setLoading(true);
             setError(null);
+            setTooManyTransactions(false);
 
             try {
                 const token = getCookie("token") || localStorage.getItem("token");
@@ -32,16 +34,19 @@ export function useWalletInsightFetcher(input: string, isTxid: boolean) {
                         }
 
                         const data = await walletResponse.json();
-                        // This log confirmed 145 data for the wallet TYPE, which is not the issue
-                        // console.log("useWalletInsightFetcher - wallet type data:", data);
+                        
+                        // Check if wallet has too many transactions
+                        if (data.tx_count > 1500) {
+                            setTooManyTransactions(true);
+                            setError("Too many transactions, more support will be added soon");
+                            return;
+                        }
 
                         setWalletData(data);
                         break;
-
-
                 }
             } catch (err) {
-                console.error("Error in useWalletInsightFetcher:", err); // Log the error
+                console.error("Error in useWalletInsightFetcher:", err);
                 setError(err instanceof Error ? err.message : "An error occurred");
             } finally {
                 setLoading(false);
@@ -54,6 +59,7 @@ export function useWalletInsightFetcher(input: string, isTxid: boolean) {
         walletData,
         loading,
         error,
+        tooManyTransactions,
         fetchWalletInsights,
     };
 }

@@ -10,7 +10,6 @@ import Link from "next/link";
 import {satoshisToBTC} from "@/utils/formatters";
 import {copyToClipboard} from "@/utils/copyToClipboard";
 import {getWalletAmount} from "@/utils/transactionValueFetcher";
-import {useHistoricalPrices} from "@/hooks/use-historical-prices";
 import {useCoinAge} from "@/hooks/use-coin-age";
 import PriceBasedGainCalculator from "@/components/PriceBasedGainCalculator/PriceBasedGainCalculator";
 import {useCurrentPrice} from "@/hooks/use-current-price";
@@ -18,7 +17,6 @@ import {Button} from "@/components/ui/button";
 import {exportToCSV} from "@/utils/exportAsCsv";
 import {getCookie} from "cookies-next";
 import {HistoricalPrice} from "@/types/historicalPrice.types";
-
 
 interface WalletTransactionsDisplayProps {
     data: WalletData;
@@ -28,64 +26,100 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
     const [selectedTxTimestamp, setSelectedTxTimestamp] = React.useState<string | undefined>(
         data?.transactions[0]?.status?.block_time?.toString()
     );
-    const {priceData} = useHistoricalPrices(selectedTxTimestamp);
     const {coinAgeData, isLoading: coinAgeLoading} = useCoinAge(data?.address.toString());
     const currentPrice = useCurrentPrice();
+    
+    // State for historical prices
+    const [historicalPrices, setHistoricalPrices] = React.useState<{ [key: string]: HistoricalPrice }>({});
+    const [isLoadingPrices, setIsLoadingPrices] = React.useState(false);
+    const [visibleTransactions, setVisibleTransactions] = React.useState(20); // Start with 20 transactions
+
     const blockToTimestampMap = React.useMemo(() => {
         const map: Record<number, number> = {};
-
-        // Populate map from transaction data
         data.transactions.forEach(tx => {
             if (tx.status?.block_height && tx.status?.block_time) {
                 map[tx.status.block_height] = tx.status.block_time;
             }
         });
-
         return map;
     }, [data]);
 
-    const [historicalPrices, setHistoricalPrices] = React.useState<{ [key: string]: HistoricalPrice }>({});
+    // Optimized price fetching with parallel requests and caching
     React.useEffect(() => {
-        if (!data?.transactions) return;
+        if (!data?.transactions?.length) return;
 
         const fetchAllPrices = async () => {
-            const prices: { [key: string]: HistoricalPrice } = {};
+            setIsLoadingPrices(true);
+            
+            try {
+                // Get visible transactions only
+                const visibleTxs = data.transactions.slice(0, visibleTransactions);
+                
+                // Get unique timestamps that we don't already have
+                const uniqueTimestamps = [...new Set(
+                    visibleTxs
+                        .map(tx => tx.status?.block_time?.toString())
+                        .filter(Boolean)
+                        .filter(timestamp => !historicalPrices[timestamp!])
+                )] as string[];
 
-            // Create a function to fetch a single price
-            const fetchPrice = async (timestamp: string) => {
-                try {
-                    const token = getCookie("token") || localStorage.getItem("token");
-                    const response = await fetch(`/api/historical-price?timestamp=${timestamp}`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                        },
-                    });
-                    if (response.ok) {
-                        return await response.json();
+                if (uniqueTimestamps.length === 0) {
+                    setIsLoadingPrices(false);
+                    return;
+                }
+
+                const token = getCookie("token") || localStorage.getItem("token");
+
+                // Fetch all prices in parallel
+                const pricePromises = uniqueTimestamps.map(async (timestamp) => {
+                    try {
+                        const response = await fetch(`/api/historical-price?timestamp=${timestamp}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                            },
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            return { timestamp, data };
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching price for timestamp ${timestamp}:`, error);
                     }
-                } catch (error) {
-                    console.error('Error fetching price data:', error);
-                }
-                return null;
-            };
+                    return null;
+                });
 
-            // Fetch prices for all transactions with timestamps
-            for (const tx of data.transactions) {
-                const timestamp = tx.status?.block_time?.toString();
-                if (timestamp && !prices[timestamp]) {
-                    prices[timestamp] = await fetchPrice(timestamp);
-                }
+                // Wait for all requests to complete
+                const priceResults = await Promise.all(pricePromises);
+                
+                // Update state with new prices
+                const newPrices = { ...historicalPrices };
+                priceResults.forEach(result => {
+                    if (result) {
+                        newPrices[result.timestamp] = result.data;
+                    }
+                });
+
+                setHistoricalPrices(newPrices);
+            } catch (error) {
+                console.error('Error fetching historical prices:', error);
+            } finally {
+                setIsLoadingPrices(false);
             }
-
-            setHistoricalPrices(prices);
         };
 
         fetchAllPrices();
-    }, [data?.transactions]);
+    }, [data?.transactions, visibleTransactions]);
 
     const handleSelectTransaction = (timestamp: string | undefined) => {
         setSelectedTxTimestamp(timestamp);
     };
+
+    const loadMoreTransactions = () => {
+        setVisibleTransactions(prev => Math.min(prev + 20, data.transactions.length));
+    };
+
+    // Get selected price data for the PriceBasedGainCalculator
+    const selectedPriceData = selectedTxTimestamp ? historicalPrices[selectedTxTimestamp] : undefined;
 
     if (!data || !data.transactions || data.transactions.length === 0) {
         return (
@@ -101,16 +135,17 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
         <Card className="w-full">
             <CardHeader>
                 <CardTitle>Wallet Transactions</CardTitle>
-                <CardDescription className={"flex items-center justify-between"}>
+                <CardDescription className="flex items-center justify-between">
                     <div>
                         Address: <span className="font-mono text-sm">{data.address}</span>
                         <Badge className="ml-2">{data.transactions.length} transactions</Badge>
+                        {isLoadingPrices && <Badge variant="secondary" className="ml-2">Loading prices...</Badge>}
                     </div>
                     <div>
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => exportToCSV(data, priceData, coinAgeData, currentPrice?.priceData, historicalPrices)}
+                            onClick={() => exportToCSV(data, selectedPriceData, coinAgeData, currentPrice?.priceData, historicalPrices)}
                             className="flex items-center gap-2"
                         >
                             <FileDown className="h-4 w-4"/>
@@ -137,11 +172,12 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {data.transactions.map((tx) => {
+                            {data.transactions.slice(0, visibleTransactions).map((tx) => {
                                 const txTimestamp = tx.status?.block_time?.toString();
                                 const coinAgeDetail = coinAgeData?.coin_age_details?.find(
                                     (detail) => detail.txid === tx.txid
                                 );
+                                const historicalPrice = txTimestamp ? historicalPrices[txTimestamp] : undefined;
 
                                 return (
                                     <TableRow key={tx.txid} onClick={() => handleSelectTransaction(txTimestamp)}>
@@ -215,17 +251,17 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                                             {satoshisToBTC(getWalletAmount(tx, data.address.toString()))}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            {selectedTxTimestamp === txTimestamp && priceData ? (
+                                            {historicalPrice ? (
                                                 <div>
-                                                    <div>{priceData.prices[0]?.EUR}€</div>
+                                                    <div>{historicalPrice.prices[0]?.EUR}€</div>
                                                     <div className="text-xs text-muted-foreground">
-                                                        ${priceData.prices[0]?.USD}
-                                                        <p className={"text-xs text-muted-foreground"}>USD/EUR
-                                                            Rate: {priceData.exchangeRates.USDEUR}</p></div>
+                                                        ${historicalPrice.prices[0]?.USD}
+                                                        <p className="text-xs text-muted-foreground">USD/EUR
+                                                            Rate: {historicalPrice.exchangeRates.USDEUR}</p>
+                                                    </div>
                                                 </div>
-
                                             ) : (
-                                                "Select for price"
+                                                "Loading Price..."
                                             )}
                                         </TableCell>
                                         <TableCell>
@@ -246,11 +282,10 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                                                             <PriceBasedGainCalculator
                                                                 coinAgeDetail={coinAgeDetail}
                                                                 blockToTimestampMap={blockToTimestampMap}
-                                                                // Pass current price for unrealized gains calculation
                                                                 currentPrice={currentPrice?.priceData?.EUR}
                                                                 isRealized={!!coinAgeDetail.spent_block}
+                                                                historicalPrice={historicalPrice}
                                                             />
-
                                                         )}
                                                     </div>
                                                 </div>
@@ -258,13 +293,19 @@ export function WalletTransactionsDisplay({data}: WalletTransactionsDisplayProps
                                                 <span className="text-muted-foreground">No data</span>
                                             )}
                                         </TableCell>
-
                                     </TableRow>
                                 )
                             })}
                         </TableBody>
                     </Table>
                 </ScrollArea>
+                {visibleTransactions < data.transactions.length && (
+                    <div className="p-4">
+                        <Button variant="outline" onClick={loadMoreTransactions}>
+                            Load More Transactions
+                        </Button>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

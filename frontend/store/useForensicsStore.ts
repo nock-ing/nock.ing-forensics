@@ -27,6 +27,9 @@ interface ForensicsState {
   walletLoading: boolean;
   walletError: string | null;
   
+  // Request tracking
+  activeRequests: Set<string>;
+  
   // Actions
   setInput: (input: string) => void;
   setIsTxid: (isTxid: boolean) => void;
@@ -49,16 +52,28 @@ export const useForensicsStore = create<ForensicsState>((set, get) => ({
   error: null,
   walletLoading: false,
   walletError: null,
+  activeRequests: new Set(),
   
   // Actions
   setInput: (input) => set({ input }),
   setIsTxid: (isTxid) => set({ isTxid }),
   
   fetchTxInsights: async (type) => {
-    const { input, isTxid } = get();
+    const { input, isTxid, activeRequests } = get();
     if (!input || !isTxid) return;
 
-    set({ loading: true, error: null });
+    const requestKey = `tx-${type}-${input}`;
+    
+    // Prevent duplicate requests
+    if (activeRequests.has(requestKey)) {
+      return;
+    }
+
+    set(state => ({ 
+      loading: true, 
+      error: null,
+      activeRequests: new Set(state.activeRequests).add(requestKey)
+    }));
 
     try {
       const token = getCookie("token") || localStorage.getItem("token");
@@ -111,18 +126,32 @@ export const useForensicsStore = create<ForensicsState>((set, get) => ({
     } catch (err) {
       set({ error: err instanceof Error ? err.message : "An error occurred" });
     } finally {
-      set({ loading: false });
+      set(state => ({
+        loading: false,
+        activeRequests: new Set([...state.activeRequests].filter(key => key !== requestKey))
+      }));
     }
   },
   
   fetchWalletInsights: async (type) => {
-    const { input, isTxid } = get();
+    const { input, isTxid, activeRequests } = get();
     if (!input) return;
 
     // Only proceed if isTxid is false (meaning it's a wallet address)
     if (isTxid) return;
 
-    set({ walletLoading: true, walletError: null });
+    const requestKey = `wallet-${type}-${input}`;
+    
+    // Prevent duplicate requests
+    if (activeRequests.has(requestKey)) {
+      return;
+    }
+
+    set(state => ({ 
+      walletLoading: true, 
+      walletError: null,
+      activeRequests: new Set(state.activeRequests).add(requestKey)
+    }));
 
     try {
       const token = getCookie("token") || localStorage.getItem("token");
@@ -146,7 +175,10 @@ export const useForensicsStore = create<ForensicsState>((set, get) => ({
       console.error("Error in fetchWalletInsights:", err);
       set({ walletError: err instanceof Error ? err.message : "An error occurred" });
     } finally {
-      set({ walletLoading: false });
+      set(state => ({
+        walletLoading: false,
+        activeRequests: new Set([...state.activeRequests].filter(key => key !== requestKey))
+      }));
     }
   },
   
@@ -161,5 +193,6 @@ export const useForensicsStore = create<ForensicsState>((set, get) => ({
     error: null,
     walletLoading: false,
     walletError: null,
+    activeRequests: new Set(),
   }),
 }));

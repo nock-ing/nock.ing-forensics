@@ -1,19 +1,22 @@
 import {useHistoricalPrices} from "@/hooks/use-historical-prices";
 import {CoinAgeResponse} from "@/types/coinAgeData.types";
 import {calculateRealizedGain} from "@/utils/calculateRealizedGain";
+import {HistoricalPrice} from "@/types/historicalPrice.types";
 
 interface PriceBasedGainCalculatorProps {
-    coinAgeDetail: CoinAgeResponse["coin_age_details"][0];
-    blockToTimestampMap?: Record<number, number>;
-    currentPrice?: number; // Add current price for unrealized gains
-    isRealized?: boolean;  // Flag to determine if this is a realized gain
+    coinAgeDetail: CoinAgeResponse["coin_age_details"][0],
+    blockToTimestampMap?: Record<number, number>,
+    currentPrice?: number,
+    isRealized?: boolean,
+    historicalPrice?: HistoricalPrice | undefined
 }
 
 export default function PriceBasedGainCalculator({
                                                      coinAgeDetail,
                                                      blockToTimestampMap,
                                                      currentPrice,
-                                                     isRealized = true
+                                                     isRealized = true,
+
                                                  }: PriceBasedGainCalculatorProps) {
     const receivedTimestamp = blockToTimestampMap?.[coinAgeDetail.received_block] ||
         (coinAgeDetail.received_block * 600 + 1230768000).toString();

@@ -198,7 +198,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
       set({ saveLoading: true });
       const token = getCookie("token") || localStorage.getItem("token");
       
-      const response = await fetch(`/api/save-wallet`, {
+      const response = await fetch(`/api/wallets/create`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

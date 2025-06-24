@@ -5,7 +5,12 @@ import {useState, useEffect} from "react";
 import {WalletData} from "@/types/wallet.types";
 import {toast} from "@/hooks/use-toast";
 
-export default function SaveWalletButton({walletData}: { walletData: WalletData }) {
+interface SaveWalletButtonProps {
+    walletData: WalletData;
+    onWalletSaved?: () => void;
+}
+
+export default function SaveWalletButton({walletData, onWalletSaved}: SaveWalletButtonProps) {
     const {addWallet, getWallets, addWalletStatus: {loading}} = useWalletApi();
     const [isSaved, setIsSaved] = useState(false);
     const [isChecking, setIsChecking] = useState(true);
@@ -29,9 +34,13 @@ export default function SaveWalletButton({walletData}: { walletData: WalletData 
                         wallet => wallet.wallet_address === walletData.address.toString()
                     );
                     setIsSaved(walletExists);
+                    
+                    // Notify parent if wallet is already saved
+                    if (walletExists && onWalletSaved) {
+                        onWalletSaved();
+                    }
                 }
             } catch (err) {
-
                 console.error("Error checking wallet:", err);
             } finally {
                 if (isMounted) {
@@ -47,7 +56,7 @@ export default function SaveWalletButton({walletData}: { walletData: WalletData 
             isMounted = false;
         };
         // Only run this effect once when component mounts
-    }, []);
+    }, [onWalletSaved]);
 
     const handleSaveWallet = async () => {
         if (isSaved) return;
@@ -67,6 +76,11 @@ export default function SaveWalletButton({walletData}: { walletData: WalletData 
                 title: "Wallet saved",
                 description: "The wallet has been added to your database.",
             });
+            
+            // Notify parent that wallet has been saved
+            if (onWalletSaved) {
+                onWalletSaved();
+            }
         }
     };
 
