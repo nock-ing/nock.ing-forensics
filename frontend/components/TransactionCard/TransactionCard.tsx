@@ -110,9 +110,6 @@ export default function TransactionCard({ transaction }: { transaction: RelatedT
                                         transaction.details.vout.reduce((sum, output) => sum + output.value, 0)
                                     )}
                                 </p>
-                                <p>
-                                    <strong>Fee:</strong> {formatBTC(0)} (not provided in the example data)
-                                </p>
                             </div>
                         </CollapsibleContent>
                     </Collapsible>

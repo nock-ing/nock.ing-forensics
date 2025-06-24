@@ -1,7 +1,7 @@
 "use client"
 
 import {useSearchParams, useRouter} from "next/navigation"
-import {useEffect, useState} from "react"
+import {useEffect, useState, useRef} from "react"
 import {Input} from "@/components/ui/input"
 import {Button} from "@/components/ui/button"
 import CoinAge from "@/components/CoinAge"
@@ -40,27 +40,69 @@ export default function ForensicsPage() {
         walletData,
         loading: walletLoading,
         error: walletError,
+        tooManyTransactions,
         fetchWalletInsights,
     } = useWalletInsightFetcher(input || "", isTxid);
 
+    // Track what has been fetched to prevent duplicate requests
+    const fetchedRef = useRef({
+        input: "",
+        isTxid: false,
+        walletFetched: false,
+        txFetched: false
+    });
 
     useEffect(() => {
         if (!input) return;
 
-        if (isTxid) {
+        const currentKey = `${input}-${isTxid}`;
+        const lastKey = `${fetchedRef.current.input}-${fetchedRef.current.isTxid}`;
+
+        // Only fetch if input/type changed
+        if (currentKey === lastKey) return;
+
+        // Update tracking
+        fetchedRef.current = {
+            input,
+            isTxid,
+            walletFetched: false,
+            txFetched: false
+        };
+
+        if (isTxid && !fetchedRef.current.txFetched) {
+            fetchedRef.current.txFetched = true;
             fetchTxInsights("coinAge");
             fetchTxInsights("relatedTx");
             fetchTxInsights("transaction");
             fetchTxInsights("wallet");
             fetchTxInsights("mempool");
-        } else {
+        } else if (!isTxid && !fetchedRef.current.walletFetched) {
+            fetchedRef.current.walletFetched = true;
             fetchWalletInsights("wallet");
-            fetchWalletInsights("wallettx");
         }
-    }, [fetchTxInsights, fetchWalletInsights, input, isTxid]);
+    }, [input, isTxid, fetchTxInsights, fetchWalletInsights]);
+
+    // Separate effect for wallet transactions - only runs when wallet data is loaded
+    useEffect(() => {
+        if (!input || isTxid || !walletData || tooManyTransactions) return;
+        
+        if (fetchedRef.current.input === input && fetchedRef.current.walletFetched) {
+            return;
+        }
+
+        fetchWalletInsights("wallettx");
+    }, [walletData, tooManyTransactions, input, isTxid, fetchWalletInsights]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        // Reset fetch tracking when user submits new input
+        fetchedRef.current = {
+            input: "",
+            isTxid: false,
+            walletFetched: false,
+            txFetched: false
+        };
+        
         // A simple check: most transaction IDs are 64-character hex strings.
         const isTxid = /^[0-9a-fA-F]{64}$/.test(newInput);
         router.push(`/forensics?input=${newInput}&isTxid=${isTxid}`);
@@ -125,16 +167,31 @@ export default function ForensicsPage() {
                         )}
                         {error && <p className="text-destructive">{error}</p>}
                         {relatedTxData && (
-                            <div className="flex">
-                                <RelatedTransactions {...relatedTxData} />
-                                <BitcoinPrevTxChart {...relatedTxData} />
+                            <div className="flex flex-col gap-4">
+                                <div>
+                                    <BitcoinPrevTxChart {...relatedTxData} />
+                                </div>
+                                <div>
+                                    <RelatedTransactions {...relatedTxData} />
+                                </div>
                             </div>
                         )}
                     </div>
                 </>
             )}
 
-            {!isTxid && walletData && (
+            {!isTxid && tooManyTransactions && (
+                <div className="p-6 border border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-700 rounded-lg">
+                    <h2 className="text-xl font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                        Too Many Transactions
+                    </h2>
+                    <p className="text-amber-700 dark:text-amber-300">
+                        This wallet has over 1,500 transactions. More support will be added soon to handle wallets with high transaction volumes.
+                    </p>
+                </div>
+            )}
+
+            {!isTxid && walletData && !tooManyTransactions && (
                 <>
                     <div>
                         <WalletInfo walletData={walletData} walletError={walletError} walletLoading={walletLoading}

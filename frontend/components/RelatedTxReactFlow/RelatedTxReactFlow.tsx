@@ -12,14 +12,12 @@ import {AnimatedSvgEdge} from '@/components/animated-svg-edge';
 import {ZoomSlider} from '@/components/zoom-slider';
 import {formatAddress} from '@/utils/formatters';
 import {LabeledGroupNode} from '@/components/labeled-group-node';
-import { TransactionDetailsPanel } from '@/components/TransactionDetailsPanel/TransactionDetailsPanel';
-import { useRouter } from 'next/navigation';
 import { useTransactionStore } from '@/store/useTransactionStore';
 import {CustomNodeData, TransactionFlowProps} from "@/types/relatedTx.types";
 import SaveTransactionButton from "@/components/SaveTransactionButton/SaveTransactionButton";
 
 export function RelatedTxReactFlow({transactionId, zoomFactor = 1 }: TransactionFlowProps) {
-    const router = useRouter();
+    // const router = useRouter();
 
 
     const {
@@ -61,10 +59,11 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1 }: Transaction
         selectNode(node);
         openPanel();
     }, [selectNode, openPanel]);
-
+/*
     const handleViewDetails = useCallback((txid: string) => {
         router.push(`/forensics?input=${txid}&isTxid=true`);
     }, [router]);
+ */
 
     useEffect(() => {
         if (!relatedTxData) return;
@@ -207,9 +206,9 @@ export function RelatedTxReactFlow({transactionId, zoomFactor = 1 }: Transaction
                 <ZoomSlider />
             </ReactFlow>
 
-            <TransactionDetailsPanel
+            {/*<TransactionDetailsPanel
                 onViewDetails={handleViewDetails}
-            />
+            />*/}
         </div>
     );
 }

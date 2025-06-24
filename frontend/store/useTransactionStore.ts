@@ -48,10 +48,22 @@ interface TransactionData {
   priceAtTime?: number;
 }
 
+// Store for individual transaction details
+interface TransactionDetails {
+  [txid: string]: {
+    amount: number;
+    timestamp: number;
+    priceAtTime?: number;
+    fee?: number;
+    size?: number;
+  };
+}
+
 interface TransactionState {
   // Transaction data
   transactionId: string | null;
   relatedTxData: RelatedTxData | undefined;
+  transactionDetails: TransactionDetails;
   loading: boolean;
   
   // ReactFlow state
@@ -75,6 +87,7 @@ interface TransactionState {
   closePanel: () => void;
   getTransactionData: (node: Node<CustomNodeData>) => TransactionData | null;
   fetchRelatedTx: (txid: string) => Promise<void>;
+  fetchTransactionDetails: (txid: string) => Promise<void>;
 }
 
 // Create the store
@@ -82,6 +95,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   // Initial state
   transactionId: null,
   relatedTxData: undefined,
+  transactionDetails: {},
   loading: false,
   nodes: [],
   edges: [],
@@ -112,16 +126,79 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
   closePanel: () => set({ isPanelOpen: false }),
   
   getTransactionData: (node) => {
-    const { transactionId } = get();
+    const { transactionId, transactionDetails } = get();
     if (!node || !transactionId) return null;
     
-    const txid = node.id === 'main-tx' ? transactionId : node.id.replace('input-', '');
-    return {
+    let txid;
+    
+    if (node.id === 'main-tx') {
+      txid = transactionId;
+    } else {
+      txid = node.id.replace('input-', '');
+    }
+    
+    // Get details from the transactionDetails store
+    const details = transactionDetails[txid];
+    
+    if (!details) {
+      console.warn('No transaction details found for:', txid);
+      return {
+        txid,
+        amount: 0,
+        timestamp: Date.now() / 1000,
+        priceAtTime: undefined,
+      };
+    }
+    
+    const result = {
       txid,
-      amount: node.data.amount || 0,
-      timestamp: node.data.timestamp || 0,
-      priceAtTime: node.data.priceAtTime,
+      amount: details.amount,
+      timestamp: details.timestamp,
+      priceAtTime: details.priceAtTime,
     };
+    
+    console.log('Transaction data for', txid, ':', result);
+    return result;
+  },
+  
+  fetchTransactionDetails: async (txid) => {
+    try {
+      const response = await fetch(`/api/tx-info?txid=${txid}`);
+      const data = await response.json();
+      
+      console.log(`Transaction details for ${txid}:`, data);
+      
+      // Extract relevant information from the tx-info API response
+      // You'll need to adjust this based on your actual API response structure
+      let amount = 0;
+      let timestamp = 0;
+      
+      // Calculate total output amount (you might want to adjust this logic)
+      if (data.vout && Array.isArray(data.vout)) {
+        amount = data.vout.reduce((total: number, output: any) => total + (output.value || 0), 0);
+      }
+      
+      // Get timestamp from block time or status
+      if (data.status?.block_time) {
+        timestamp = data.status.block_time;
+      }
+      
+      // Update the store with transaction details
+      set((state) => ({
+        transactionDetails: {
+          ...state.transactionDetails,
+          [txid]: {
+            amount,
+            timestamp,
+            fee: data.fee,
+            size: data.size,
+          }
+        }
+      }));
+      
+    } catch (error) {
+      console.error(`Error fetching transaction details for ${txid}:`, error);
+    }
   },
   
   fetchRelatedTx: async (txid) => {
@@ -129,9 +206,23 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
     
     try {
       set({ loading: true });
+      
+      // Fetch related transactions
       const response = await fetch(`/api/redis-related-tx?txid=${txid}`);
       const data = await response.json();
+      
+      console.log('Related TX API Response:', data);
       set({ relatedTxData: data });
+      
+      // Fetch details for the main transaction
+      await get().fetchTransactionDetails(txid);
+      
+      // Fetch details for all related transactions
+      const relatedTxIds = Object.keys(data.related_txids || {});
+      await Promise.all(
+        relatedTxIds.map(relatedTxId => get().fetchTransactionDetails(relatedTxId))
+      );
+      
     } catch (error) {
       console.error("Error fetching related transactions:", error);
     } finally {
